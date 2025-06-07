@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemma AI Connection Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f0f0f0; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+        .warning { background: #fff3e0; color: #f57c00; }
+        .info { background: #e3f2fd; color: #1565c0; }
+        button { background: #2196f3; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0; }
+        .code { background: #f5f5f5; padding: 10px; border-radius: 4px; font-family: monospace; margin: 10px 0; }
+        #log { max-height: 300px; overflow-y: auto; background: #f8f8f8; padding: 10px; border-radius: 4px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 Gemma AI Connection Test</h1>
+        
+        <div class="status info">
+            <strong>Debug Mode:</strong> Testing Gemma 3 27B AI connection
+        </div>
+
+        <h3>Step 1: Check Current Status</h3>
+        <button onclick="checkStatus()">Check AI Status</button>
+        <div id="status-result"></div>
+
+        <h3>Step 2: Test API Endpoint</h3>
+        <label>Enter your Lambda API Gateway URL:</label>
+        <textarea id="api-endpoint" rows="2" placeholder="https://your-api-id.execute-api.us-east-1.amazonaws.com/prod/chat">https://your-api-id.execute-api.us-east-1.amazonaws.com/prod/chat</textarea>
+        <button onclick="testEndpoint()">Test Endpoint</button>
+        <button onclick="useTestEndpoint()">Use Test Endpoint (HuggingFace)</button>
+
+        <h3>Step 3: Send Test Message</h3>
+        <textarea id="test-message" rows="2" placeholder="Hello, can you help me?">Hello, can you help me?</textarea>
+        <button onclick="sendTestMessage()">Send Test Message</button>
+
+        <h3>Debug Log</h3>
+        <div id="log"></div>
+        <button onclick="clearLog()">Clear Log</button>
+
+        <h3>Quick Fixes</h3>
+        <div class="status warning">
+            <strong>Common Issues:</strong>
+            <ul>
+                <li><strong>Lambda not deployed:</strong> Upload your .zip file to AWS Lambda first</li>
+                <li><strong>Wrong API URL:</strong> Get the correct URL from API Gateway</li>
+                <li><strong>CORS issues:</strong> Make sure CORS is enabled for edumark.surge.sh</li>
+                <li><strong>No API key:</strong> HuggingFace API works without keys (slower but free)</li>
+            </ul>
+        </div>
+
+        <h3>Emergency Fallback</h3>
+        <button onclick="enableFallbackMode()">Enable Offline AI (No Server Needed)</button>
+        <div id="fallback-status"></div>
+    </div>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        function checkStatus() {
+            const resultDiv = document.getElementById('status-result');
+            log('Checking AI integration status...');
+            
+            let status = [];
+            
+            // Check if files exist
+            if (typeof EduMarkAI !== 'undefined') {
+                status.push('✅ EduMarkAI class loaded');
+            } else {
+                status.push('❌ EduMarkAI class not found');
+            }
+            
+            // Check instance
+            if (window.edumarkAI) {
+                status.push('✅ AI instance exists');
+                status.push(`📡 Current endpoint: ${window.edumarkAI.apiEndpoint}`);
+            } else {
+                status.push('❌ AI instance not created');
+            }
+            
+            // Check Lambda deployment
+            const savedEndpoint = localStorage.getItem('edumarkAIEndpoint');
+            if (savedEndpoint && !savedEndpoint.includes('your-api-id')) {
+                status.push('✅ Custom endpoint configured');
+            } else {
+                status.push('⚠️ Using default endpoint (needs Lambda deployment)');
+            }
+            
+            resultDiv.innerHTML = '<ul><li>' + status.join('</li><li>') + '</li></ul>';
+            log('Status check completed');
+        }
+
+        async function testEndpoint() {
+            const endpoint = document.getElementById('api-endpoint').value.trim();
+            log(`Testing endpoint: ${endpoint}`);
+            
+            if (!endpoint || endpoint.includes('your-api-id')) {
+                log('❌ Invalid endpoint - please enter your actual Lambda URL');
+                return;
+            }
+            
+            try {
+                log('Sending test request...');
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Origin': 'https://edumark.surge.sh'
+                    },
+                    body: JSON.stringify({ 
+                        message: 'Test connection',
+                        history: []
+                    })
+                });
+                
+                log(`Response status: ${response.status}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log('✅ Endpoint is working!');
+                    log(`AI Response: ${data.response || 'No response field'}`);
+                    
+                    // Update the AI integration
+                    if (window.edumarkAI) {
+                        window.edumarkAI.updateApiEndpoint(endpoint);
+                        log('✅ AI integration updated with working endpoint');
+                    }
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ Endpoint error: ${response.status} - ${errorText}`);
+                }
+                
+            } catch (error) {
+                log(`❌ Connection failed: ${error.message}`);
+                log('💡 This usually means Lambda is not deployed yet');
+            }
+        }
+
+        async function useTestEndpoint() {
+            log('Setting up HuggingFace test endpoint...');
+            
+            // Use HuggingFace Inference API as test
+            const testEndpoint = 'https://api-inference.huggingface.co/models/google/gemma-2-9b-it';
+            
+            try {
+                const response = await fetch(testEndpoint, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        inputs: 'Hello, can you help me with my homework?',
+                        parameters: {
+                            max_new_tokens: 100,
+                            temperature: 0.7
+                        }
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log('✅ HuggingFace test endpoint is working!');
+                    log(`Test response: ${JSON.stringify(data)}`);
+                } else if (response.status === 503) {
+                    log('⏳ Model is loading on HuggingFace, try again in a minute');
+                } else {
+                    log(`❌ HuggingFace error: ${response.status}`);
+                }
+                
+            } catch (error) {
+                log(`❌ HuggingFace test failed: ${error.message}`);
+            }
+        }
+
+        async function sendTestMessage() {
+            const message = document.getElementById('test-message').value.trim();
+            const endpoint = document.getElementById('api-endpoint').value.trim();
+            
+            if (!message) {
+                log('❌ Please enter a test message');
+                return;
+            }
+            
+            log(`Sending message: "${message}"`);
+            
+            try {
+                // Try the endpoint
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Origin': 'https://edumark.surge.sh'
+                    },
+                    body: JSON.stringify({ 
+                        message: message,
+                        history: []
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log('✅ Message sent successfully!');
+                    log(`AI Response: ${data.response}`);
+                } else {
+                    log(`❌ Failed to send message: ${response.status}`);
+                    log('Trying fallback response...');
+                    generateFallbackResponse(message);
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                log('Generating fallback response...');
+                generateFallbackResponse(message);
+            }
+        }
+
+        function generateFallbackResponse(message) {
+            const responses = {
+                'hello': 'Hello! I\'m here to help with your educational needs.',
+                'help': 'I can assist with assignments, explanations, writing, and study tips.',
+                'homework': 'I\'d be happy to help with your homework! What subject are you working on?',
+                'assignment': 'For assignments, I can help with planning, research, writing, and organization.',
+                'explain': 'I can explain complex concepts in simple terms. What would you like me to explain?',
+                'study': 'Here are some study tips: 1) Break information into chunks, 2) Use active recall, 3) Practice regularly.',
+                'default': 'I understand you\'re looking for educational help. Could you be more specific about what you need assistance with?'
+            };
+            
+            const lowerMessage = message.toLowerCase();
+            let response = responses.default;
+            
+            for (const [key, value] of Object.entries(responses)) {
+                if (lowerMessage.includes(key)) {
+                    response = value;
+                    break;
+                }
+            }
+            
+            log(`🤖 Fallback AI Response: ${response}`);
+        }
+
+        function enableFallbackMode() {
+            log('Enabling offline AI fallback mode...');
+            
+            // Create simple offline AI
+            window.offlineAI = {
+                respond: generateFallbackResponse,
+                enabled: true
+            };
+            
+            document.getElementById('fallback-status').innerHTML = `
+                <div class="status success">
+                    ✅ Offline AI enabled! The chat will work with basic responses until you deploy Lambda.
+                </div>
+            `;
+            
+            log('✅ Fallback mode enabled - AI chat will work with basic responses');
+        }
+
+        // Auto-initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🧠 Gemma AI Test Tool loaded');
+            log('Use the buttons above to diagnose connection issues');
+            
+            // Check if running from file:// vs https://
+            if (location.protocol === 'file:') {
+                log('⚠️ Running from local file - some features may not work');
+                log('💡 Upload to surge.sh for full functionality');
+            }
+        });
+    </script>
+</body>
+</html> 

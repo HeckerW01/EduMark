@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassPDF Data Cleaner</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .button {
+            background-color: #f44336;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>ClassPDF Data Cleaner</h1>
+    <p>Click the button below to clear all data from your browser's localStorage.</p>
+    <button id="clear-btn" class="button">Clear All Data</button>
+    <div id="status"></div>
+    <div id="output">
+        <h2>Current localStorage Data:</h2>
+        <pre id="data-display"></pre>
+    </div>
+    
+    <script src="clear-data.js"></script>
+    <script>
+        document.getElementById('clear-btn').addEventListener('click', function() {
+            try {
+                const result = clearAllData();
+                
+                if (result) {
+                    document.getElementById('status').innerHTML = '<p class="success">All data cleared successfully!</p>';
+                } else {
+                    document.getElementById('status').innerHTML = '<p class="error">Failed to clear data.</p>';
+                }
+                
+                // Update display
+                displayLocalStorageData();
+            } catch (error) {
+                document.getElementById('status').innerHTML = '<p class="error">Error: ' + error.message + '</p>';
+            }
+        });
+        
+        function displayLocalStorageData() {
+            const display = document.getElementById('data-display');
+            let output = '';
+            
+            // Get all localStorage keys and values
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                let value = localStorage.getItem(key);
+                
+                // Try to format JSON values
+                try {
+                    value = JSON.parse(value);
+                    value = JSON.stringify(value, null, 2);
+                } catch (e) {
+                    // Not valid JSON, leave as is
+                }
+                
+                output += `// ${key}\n${value}\n\n`;
+            }
+            
+            display.textContent = output || 'No data in localStorage';
+        }
+        
+        // Initial display
+        displayLocalStorageData();
+    </script>
+</body>
+</html> 

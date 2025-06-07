@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduMark - AI-Powered Learning Platform</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/ai-chat.css">
+    <style>
+        .hero {
+            text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+        }
+        .hero h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+        .hero p {
+            font-size: 1.2em;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+        .cta-buttons button {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .cta-buttons button:hover {
+            transform: translateY(-2px);
+        }
+        #btn-teacher {
+            background: #4f46e5;
+            color: white;
+        }
+        #btn-student {
+            background: white;
+            color: #4f46e5;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            padding: 60px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .feature-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .feature-card h3 {
+            color: #4f46e5;
+            margin-bottom: 15px;
+        }
+        .ai-chat-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1em;
+            transition: transform 0.2s;
+            z-index: 1000;
+        }
+        .ai-chat-button:hover {
+            transform: translateY(-2px);
+        }
+        .ai-chat-button img {
+            width: 24px;
+            height: 24px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">EduMark</div>
+        <nav>
+            <ul>
+                <li><a href="#" id="teacher-login">Teacher Login</a></li>
+                <li><a href="#" id="student-login">Student Login</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <h1>Welcome to EduMark</h1>
+            <p>Your AI-powered learning companion for homework help, study guidance, and educational support.</p>
+            <div class="cta-buttons">
+                <button id="btn-teacher">I'm a Teacher</button>
+                <button id="btn-student">I'm a Student</button>
+            </div>
+        </section>
+
+        <section class="features">
+            <div class="feature-card">
+                <h3>AI Homework Help</h3>
+                <p>Get instant help with math problems, science concepts, and writing assignments.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Study Strategies</h3>
+                <p>Learn effective study techniques and test preparation strategies.</p>
+            </div>
+            <div class="feature-card">
+                <h3>24/7 Support</h3>
+                <p>Get help anytime with our AI-powered educational assistant.</p>
+            </div>
+        </section>
+
+        <div id="login-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div id="login-form-container"></div>
+            </div>
+        </div>
+
+        <!-- AI Chat Interface -->
+        <div id="ai-chat-container" class="ai-chat-container" style="display: none;">
+            <div class="ai-chat-header">
+                <h3>EduMark AI Assistant</h3>
+                <button class="close-chat">&times;</button>
+            </div>
+            <div class="ai-chat-messages" id="ai-chat-messages">
+                <div class="ai-message">
+                    Hello! I'm your EduMark AI assistant. How can I help you learn today?
+                </div>
+            </div>
+            <div class="ai-chat-input">
+                <textarea id="ai-message-input" placeholder="Ask me anything about your studies..."></textarea>
+                <button id="ai-send-button">Send</button>
+            </div>
+        </div>
+
+        <button class="ai-chat-button" id="open-ai-chat">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0yMSAxMmE5IDkgMCAxIDEtMTggMCA5IDkgMCAwIDEgMTggMHoiLz48cGF0aCBkPSJNOSAxMGg2TTkgMTRoNiIvPjwvc3ZnPg==" alt="AI">
+            Ask AI Assistant
+        </button>
+    </main>
+
+    <footer>
+        <p>EduMark &copy; 2025</p>
+    </footer>
+
+    <script src="js/edumark-ai-integration.js"></script>
+    <script>
+        // Initialize AI Chat
+        document.addEventListener('DOMContentLoaded', function() {
+            const aiChat = new EduMarkAI();
+            
+            // Open chat button
+            document.getElementById('open-ai-chat').addEventListener('click', function() {
+                document.getElementById('ai-chat-container').style.display = 'flex';
+            });
+
+            // Close chat button
+            document.querySelector('.close-chat').addEventListener('click', function() {
+                document.getElementById('ai-chat-container').style.display = 'none';
+            });
+
+            // Send message
+            document.getElementById('ai-send-button').addEventListener('click', function() {
+                const input = document.getElementById('ai-message-input');
+                const message = input.value.trim();
+                
+                if (message) {
+                    // Add user message
+                    const messagesDiv = document.getElementById('ai-chat-messages');
+                    messagesDiv.innerHTML += `
+                        <div class="user-message">
+                            ${message}
+                        </div>
+                    `;
+                    
+                    // Clear input
+                    input.value = '';
+                    
+                    // Send to AI
+                    aiChat.sendMessage(message)
+                        .then(response => {
+                            messagesDiv.innerHTML += `
+                                <div class="ai-message">
+                                    ${response}
+                                </div>
+                            `;
+                            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                        })
+                        .catch(error => {
+                            messagesDiv.innerHTML += `
+                                <div class="ai-message error">
+                                    Sorry, I encountered an error. Please try again.
+                                </div>
+                            `;
+                        });
+                    
+                    // Scroll to bottom
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                }
+            });
+
+            // Send on Enter (but allow Shift+Enter for new line)
+            document.getElementById('ai-message-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    document.getElementById('ai-send-button').click();
+                }
+            });
+        });
+    </script>
+</body>
+</html>  

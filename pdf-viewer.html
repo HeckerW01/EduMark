@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Document Viewer - EduMark</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .document-container {
+            width: 100%;
+            height: calc(100vh - 110px);
+            overflow: auto;
+            background-color: #525659;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 0;
+        }
+        
+        .canvas-container {
+            position: relative;
+            margin-bottom: 10px;
+        }
+        
+        .documentCanvas {
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            background-color: white;
+        }
+        
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .document-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+            gap: 10px;
+        }
+        
+        .document-title {
+            font-weight: bold;
+            font-size: 18px;
+            margin: 0;
+        }
+        
+        .toolbar-actions, .document-nav {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .page-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        #page-num, #page-count {
+            margin: 0;
+        }
+        
+        #page-input {
+            width: 50px;
+            padding: 4px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .btn {
+            padding: 6px 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .btn:hover {
+            background-color: var(--primary-color-dark);
+        }
+        
+        .btn.secondary {
+            background-color: #6c757d;
+        }
+        
+        .btn.secondary:hover {
+            background-color: #5a6268;
+        }
+        
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        #zoom-level {
+            width: 60px;
+            padding: 4px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: var(--primary-color);
+            animation: spin 1s linear infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+        
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        
+        .error-message {
+            color: #e74c3c;
+            background-color: #f9e2e2;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 5px solid #e74c3c;
+            margin: 20px;
+        }
+        
+        .log-container {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            max-width: 300px;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .annotation-tools {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .tool-btn {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .tool-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .color-picker {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .size-picker {
+            width: 60px;
+            padding: 4px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .session-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            display: none;
+        }
+        
+        .session-container.active {
+            display: block;
+        }
+        
+        .session-input {
+            width: 200px;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .annotation-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        
+        .annotation-layer.active {
+            pointer-events: auto;
+        }
+        
+        .submission-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        
+        .submission-modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn.primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn.primary:hover {
+            background-color: var(--primary-color-dark);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">EduMark</div>
+        <div class="user-info">
+            <button id="session-code-btn" class="btn secondary">Join Study Session</button>
+            <button id="close-btn" class="btn secondary">Close Viewer</button>
+        </div>
+    </header>
+    
+    <div class="toolbar">
+        <h1 class="document-title" id="document-title">Interactive Document Viewer</h1>
+        <div class="toolbar-actions">
+            <button id="hand-in-btn" class="btn primary">Hand In Work</button>
+            <button id="download-btn" class="btn">Download</button>
+            <button id="toggle-logs-btn" class="btn secondary">Show Logs</button>
+        </div>
+    </div>
+    
+    <div class="annotation-tools">
+        <button id="annotation-pen" class="tool-btn active">
+            <span>✏️</span> Annotation Pen
+        </button>
+        <button id="study-highlighter" class="tool-btn">
+            <span>🖌️</span> Study Highlighter
+        </button>
+        <button id="correction-eraser" class="tool-btn">
+            <span>🧹</span> Correction Eraser
+        </button>
+        <input type="color" id="color-picker" class="color-picker" value="#000000">
+        <input type="number" id="size-picker" class="size-picker" value="2" min="1" max="20">
+        <button id="clear-annotations" class="btn secondary">Clear All</button>
+    </div>
+    
+    <div class="document-controls">
+        <div class="document-nav">
+            <button id="navigate-back" class="btn">Previous</button>
+            <div class="page-info">
+                <input type="number" id="page-input" min="1" value="1">
+                <span>of</span>
+                <span id="page-count">0</span>
+            </div>
+            <button id="navigate-forward" class="btn">Next</button>
+        </div>
+        
+        <div class="zoom-controls">
+            <button id="zoom-out" class="btn">-</button>
+            <input type="text" id="zoom-level" value="100%" readonly>
+            <button id="zoom-in" class="btn">+</button>
+        </div>
+    </div>
+    
+    <div class="document-container" id="document-container">
+        <div class="spinner" id="spinner"></div>
+    </div>
+    
+    <div class="session-container" id="session-container">
+        <h3>Join Study Session</h3>
+        <input type="text" id="session-code-input" class="session-input" placeholder="Enter session code">
+        <button id="join-session" class="btn">Join Session</button>
+        <button id="cancel-join" class="btn secondary">Cancel</button>
+    </div>
+    
+    <div class="submission-modal" id="submission-modal">
+        <div class="modal-content">
+            <h3>Hand In Work</h3>
+            <p>Are you sure you want to hand in this work? You won't be able to make changes after submission.</p>
+            <div class="modal-actions">
+                <button id="confirm-hand-in" class="btn primary">Hand In</button>
+                <button id="cancel-hand-in" class="btn secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="log-container" id="log-container"></div>
+    
+    <script src="js/pdf.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("PDF Viewer script loaded");
+            
+            // DOM Elements
+            const pdfTitle = document.getElementById('document-title');
+            const pdfContainer = document.getElementById('document-container');
+            const downloadBtn = document.getElementById('download-btn');
+            const closeBtn = document.getElementById('close-btn');
+            const prevPageBtn = document.getElementById('navigate-back');
+            const nextPageBtn = document.getElementById('navigate-forward');
+            const pageInput = document.getElementById('page-input');
+            const pageCount = document.getElementById('page-count');
+            const zoomInBtn = document.getElementById('zoom-in');
+            const zoomOutBtn = document.getElementById('zoom-out');
+            const zoomLevel = document.getElementById('zoom-level');
+            const spinner = document.getElementById('spinner');
+            const logContainer = document.getElementById('log-container');
+            const toggleLogsBtn = document.getElementById('toggle-logs-btn');
+            
+            // Annotation state
+            let isAnnotating = false;
+            let currentTool = 'annotation-pen';
+            let currentColor = '#000000';
+            let currentSize = 2;
+            let socket = null;
+            let sessionCode = null;
+            
+            // Annotation tools
+            const annotationPen = document.getElementById('annotation-pen');
+            const studyHighlighter = document.getElementById('study-highlighter');
+            const correctionEraser = document.getElementById('correction-eraser');
+            const colorPicker = document.getElementById('color-picker');
+            const sizePicker = document.getElementById('size-picker');
+            const clearAnnotationsBtn = document.getElementById('clear-annotations');
+            
+            // Session elements
+            const sessionCodeBtn = document.getElementById('session-code-btn');
+            const sessionContainer = document.getElementById('session-container');
+            const sessionCodeInput = document.getElementById('session-code-input');
+            const joinSessionBtn = document.getElementById('join-session');
+            const cancelJoinBtn = document.getElementById('cancel-join');
+            
+            // Submission elements
+            const handInBtn = document.getElementById('hand-in-btn');
+            const submissionModal = document.getElementById('submission-modal');
+            const confirmHandInBtn = document.getElementById('confirm-hand-in');
+            const cancelHandInBtn = document.getElementById('cancel-hand-in');
+            
+            // Get assignment data from session storage
+            const assignment = JSON.parse(sessionStorage.getItem('currentAssignment') || 'null');
+            
+            // Show/hide submit button based on assignment
+            if (!assignment) {
+                handInBtn.style.display = 'none';
+            }
+            
+            // Logging function
+            function log(message, isError = false) {
+                const time = new Date().toLocaleTimeString();
+                const logItem = document.createElement('div');
+                logItem.style.color = isError ? '#ff6b6b' : '#fff';
+                logItem.textContent = `[${time}] ${message}`;
+                logContainer.appendChild(logItem);
+                logContainer.scrollTop = logContainer.scrollHeight;
+                console.log(isError ? `ERROR: ${message}` : message);
+            }
+            
+            // Toggle logs visibility
+            toggleLogsBtn.addEventListener('click', () => {
+                if (logContainer.style.display === 'block') {
+                    logContainer.style.display = 'none';
+                    toggleLogsBtn.textContent = 'Show Logs';
+                } else {
+                    logContainer.style.display = 'block';
+                    toggleLogsBtn.textContent = 'Hide Logs';
+                }
+            });
+            
+            log("PDF Viewer initialized");
+            
+            // PDF.js setup 
+            let pdfjsLib;
+            try {
+                pdfjsLib = window['pdfjs-dist/build/pdf'];
+                if (pdfjsLib) {
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'js/pdf.worker.min.js';
+                    log("PDF.js library loaded successfully");
+                } else {
+                    throw new Error("PDF.js library not found");
+                }
+            } catch (err) {
+                log(`PDF.js initialization failed: ${err.message}`, true);
+            }
+            
+            // PDF state variables
+            let pdfDoc = null;
+            let pdfData = null;
+            let currentPage = 1;
+            let scale = 1.0;
+            let pageRendering = false;
+            let pageNumPending = null;
+            
+            // Get PDF data from session storage
+            try {
+                pdfData = JSON.parse(sessionStorage.getItem('currentViewPdf') || '{}');
+                log(`PDF data retrieved from session storage: ${pdfData.name || 'unknown'}`);
+                
+                if (!pdfData || !pdfData.data) {
+                    throw new Error('PDF data not found in session storage');
+                }
+                
+                // Set the PDF title
+                pdfTitle.textContent = assignment ? assignment.title : pdfData.name;
+            } catch (err) {
+                log(`Error loading PDF data: ${err.message}`, true);
+                pdfContainer.innerHTML = `<div class="error-message">
+                    <h3>Error Loading PDF</h3>
+                    <p>${err.message}</p>
+                    <p>Please try again or contact support.</p>
+                </div>`;
+                spinner.style.display = 'none';
+                return;
+            }
+            
+            // Check if PDF.js is available
+            if (!pdfjsLib) {
+                log("PDF.js library not available, falling back to simple viewer", true);
+                
+                // Create an iframe for simple viewing
+                const iframe = document.createElement('iframe');
+                iframe.style.width = '100%';
+                iframe.style.height = '100%';
+                iframe.style.border = 'none';
+                iframe.src = pdfData.data;
+                
+                // Clear container and add iframe
+                pdfContainer.innerHTML = '';
+                pdfContainer.appendChild(iframe);
+                
+                // Disable controls
+                prevPageBtn.disabled = true;
+                nextPageBtn.disabled = true;
+                pageInput.disabled = true;
+                zoomInBtn.disabled = true;
+                zoomOutBtn.disabled = true;
+                return;
+            }
+            
+            // Show loading spinner
+            spinner.style.display = 'block';
+            
+            try {
+                // Extract the base64 data part
+                const dataUrl = pdfData.data;
+                log(`Processing PDF data URL of length: ${dataUrl.length}`);
+                
+                let pdfBytes;
+                
+                if (dataUrl.includes('base64')) {
+                    // It's a data URL with base64 encoding
+                    const base64Data = dataUrl.split(',')[1];
+                    log("Extracted base64 data from data URL");
+                    
+                    // Convert base64 to binary string
+                    let binary = '';
+                    try {
+                        binary = atob(base64Data);
+                        log(`Decoded base64 data to binary string of length: ${binary.length}`);
+                    } catch (err) {
+                        throw new Error(`Failed to decode base64 data: ${err.message}`);
+                    }
+                    
+                    // Convert binary to Uint8Array
+                    pdfBytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) {
+                        pdfBytes[i] = binary.charCodeAt(i);
+                    }
+                    log(`Converted binary string to Uint8Array of length: ${pdfBytes.length}`);
+                } else {
+                    throw new Error('PDF data is not in base64 format');
+                }
+                
+                // Load the PDF
+                log("Starting to load PDF document");
+                const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+                
+                loadingTask.promise.then(function(pdf) {
+                    log(`PDF document loaded successfully with ${pdf.numPages} pages`);
+                    pdfDoc = pdf;
+                    pageCount.textContent = pdf.numPages;
+                    pageInput.max = pdf.numPages;
+                    
+                    // Hide spinner
+                    spinner.style.display = 'none';
+                    
+                    // Render the first page
+                    renderPage(currentPage);
+                }).catch(function(error) {
+                    log(`Error loading PDF: ${error.message}`, true);
+                    pdfContainer.innerHTML = `<div class="error-message">
+                        <h3>Error Loading PDF</h3>
+                        <p>${error.message}</p>
+                        <p>Please try again or contact support.</p>
+                    </div>`;
+                    spinner.style.display = 'none';
+                    
+                    // Fallback to iframe if PDF.js fails
+                    log("Falling back to iframe viewer");
+                    const iframe = document.createElement('iframe');
+                    iframe.style.width = '100%';
+                    iframe.style.height = '100%';
+                    iframe.style.border = 'none';
+                    iframe.src = pdfData.data;
+                    pdfContainer.appendChild(iframe);
+                });
+                
+                function renderPage(pageNum) {
+                    pageRendering = true;
+                    log(`Starting to render page ${pageNum}`);
+                    
+                    // Show loading spinner
+                    spinner.style.display = 'block';
+                    
+                    // Get the page
+                    pdfDoc.getPage(pageNum).then(function(page) {
+                        log(`Page ${pageNum} retrieved successfully`);
+                        // Calculate viewport dimensions for the current scale
+                        const viewport = page.getViewport({ scale: scale });
+                        
+                        // Create or get the canvas for this page
+                        let canvas = document.getElementById(`page-${pageNum}`);
+                        let canvasWrapper;
+                        
+                        if (!canvas) {
+                            // Create a new canvas if it doesn't exist
+                            log(`Creating new canvas for page ${pageNum}`);
+                            canvasWrapper = document.createElement('div');
+                            canvasWrapper.className = 'canvas-container';
+                            canvasWrapper.id = `wrapper-${pageNum}`;
+                            
+                            canvas = document.createElement('canvas');
+                            canvas.className = 'documentCanvas';
+                            canvas.id = `page-${pageNum}`;
+                            
+                            canvasWrapper.appendChild(canvas);
+                            pdfContainer.appendChild(canvasWrapper);
+                        } else {
+                            log(`Using existing canvas for page ${pageNum}`);
+                            canvasWrapper = document.getElementById(`wrapper-${pageNum}`);
+                        }
+                        
+                        // Set canvas dimensions to match the page
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        log(`Canvas dimensions set to ${canvas.width}x${canvas.height}`);
+                        
+                        // Render the PDF page into the canvas
+                        const renderContext = {
+                            canvasContext: canvas.getContext('2d'),
+                            viewport: viewport
+                        };
+                        
+                        log(`Starting render task for page ${pageNum}`);
+                        const renderTask = page.render(renderContext);
+                        
+                        // Wait for rendering to finish
+                        renderTask.promise.then(function() {
+                            log(`Page ${pageNum} rendered successfully`);
+                            pageRendering = false;
+                            
+                            // Hide spinner
+                            spinner.style.display = 'none';
+                            
+                            // Scroll to the current page
+                            canvasWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            
+                            // Update page input to show current page
+                            pageInput.value = pageNum;
+                            
+                            // If another page is pending, render it
+                            if (pageNumPending !== null) {
+                                log(`Rendering pending page: ${pageNumPending}`);
+                                renderPage(pageNumPending);
+                                pageNumPending = null;
+                            }
+                        }).catch(function(error) {
+                            log(`Error rendering page ${pageNum}: ${error.message}`, true);
+                            spinner.style.display = 'none';
+                            pageRendering = false;
+                        });
+                    }).catch(function(error) {
+                        log(`Error getting page ${pageNum}: ${error.message}`, true);
+                        spinner.style.display = 'none';
+                        pageRendering = false;
+                    });
+                }
+                
+                // Change page function
+                function queueRenderPage(pageNum) {
+                    if (pageRendering) {
+                        log(`Page rendering in progress, queueing page ${pageNum}`);
+                        pageNumPending = pageNum;
+                    } else {
+                        renderPage(pageNum);
+                    }
+                }
+                
+                // Go to previous page
+                prevPageBtn.addEventListener('click', () => {
+                    if (currentPage <= 1) return;
+                    currentPage--;
+                    log(`Navigating to previous page: ${currentPage}`);
+                    queueRenderPage(currentPage);
+                });
+                
+                // Go to next page
+                nextPageBtn.addEventListener('click', () => {
+                    if (currentPage >= pdfDoc.numPages) return;
+                    currentPage++;
+                    log(`Navigating to next page: ${currentPage}`);
+                    queueRenderPage(currentPage);
+                });
+                
+                // Go to specific page when input changes
+                pageInput.addEventListener('change', () => {
+                    const pageNum = parseInt(pageInput.value);
+                    if (pageNum >= 1 && pageNum <= pdfDoc.numPages) {
+                        currentPage = pageNum;
+                        log(`Jumping to page ${pageNum}`);
+                        queueRenderPage(currentPage);
+                    } else {
+                        // Reset to valid value
+                        log(`Invalid page number: ${pageNum}, resetting to ${currentPage}`);
+                        pageInput.value = currentPage;
+                    }
+                });
+                
+                // Zoom controls
+                zoomInBtn.addEventListener('click', () => {
+                    if (scale >= 3.0) return; // Maximum zoom
+                    scale += 0.25;
+                    zoomLevel.value = `${Math.round(scale * 100)}%`;
+                    log(`Zoomed in to ${zoomLevel.value}`);
+                    
+                    // Re-render the current page with new scale
+                    queueRenderPage(currentPage);
+                });
+                
+                zoomOutBtn.addEventListener('click', () => {
+                    if (scale <= 0.5) return; // Minimum zoom
+                    scale -= 0.25;
+                    zoomLevel.value = `${Math.round(scale * 100)}%`;
+                    log(`Zoomed out to ${zoomLevel.value}`);
+                    
+                    // Re-render the current page with new scale
+                    queueRenderPage(currentPage);
+                });
+                
+                // Handle keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    // Left arrow for previous page
+                    if (e.key === 'ArrowLeft') {
+                        if (currentPage > 1) {
+                            currentPage--;
+                            log(`Keyboard navigation to previous page: ${currentPage}`);
+                            queueRenderPage(currentPage);
+                        }
+                    }
+                    // Right arrow for next page
+                    else if (e.key === 'ArrowRight') {
+                        if (currentPage < pdfDoc.numPages) {
+                            currentPage++;
+                            log(`Keyboard navigation to next page: ${currentPage}`);
+                            queueRenderPage(currentPage);
+                        }
+                    }
+                });
+            } catch (err) {
+                log(`Critical error in PDF handling: ${err.message}`, true);
+                spinner.style.display = 'none';
+                
+                // Show error message
+                pdfContainer.innerHTML = `<div class="error-message">
+                    <h3>Error Processing PDF</h3>
+                    <p>${err.message}</p>
+                    <p>Please try again or contact support.</p>
+                </div>`;
+                
+                // Fallback to iframe view
+                try {
+                    log("Falling back to iframe viewer");
+                    const iframe = document.createElement('iframe');
+                    iframe.style.width = '100%';
+                    iframe.style.height = '400px';
+                    iframe.style.border = '1px solid #ddd';
+                    iframe.style.marginTop = '20px';
+                    iframe.src = pdfData.data;
+                    
+                    // Add iframe below error message
+                    pdfContainer.appendChild(iframe);
+                    
+                    // Disable controls
+                    prevPageBtn.disabled = true;
+                    nextPageBtn.disabled = true;
+                    pageInput.disabled = true;
+                    zoomInBtn.disabled = true;
+                    zoomOutBtn.disabled = true;
+                } catch (iframeErr) {
+                    log(`Iframe fallback also failed: ${iframeErr.message}`, true);
+                }
+            }
+            
+            // Download button
+            downloadBtn.addEventListener('click', () => {
+                try {
+                    // Create a temporary link element
+                    const a = document.createElement('a');
+                    a.href = pdfData.data;
+                    a.download = pdfData.name || 'document.pdf';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    log(`Download initiated for file: ${pdfData.name || 'document.pdf'}`);
+                } catch (err) {
+                    log(`Error during download: ${err.message}`, true);
+                    alert(`Error downloading file: ${err.message}`);
+                }
+            });
+            
+            // Close button
+            closeBtn.addEventListener('click', () => {
+                log("Closing PDF viewer");
+                window.close();
+                // Fallback if window.close() is blocked
+                if (!window.closed) {
+                    log("window.close() was blocked, navigating to previous page");
+                    window.location.href = document.referrer || 'teacher-dashboard.html';
+                }
+            });
+            
+            // Tool selection
+            function setActiveTool(tool) {
+                [annotationPen, studyHighlighter, correctionEraser].forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.getElementById(tool).classList.add('active');
+                currentTool = tool;
+            }
+            
+            annotationPen.addEventListener('click', () => setActiveTool('annotation-pen'));
+            studyHighlighter.addEventListener('click', () => setActiveTool('study-highlighter'));
+            correctionEraser.addEventListener('click', () => setActiveTool('correction-eraser'));
+            
+            colorPicker.addEventListener('change', (e) => {
+                currentColor = e.target.value;
+            });
+            
+            sizePicker.addEventListener('change', (e) => {
+                currentSize = parseInt(e.target.value);
+            });
+            
+            // Drawing functionality
+            function createDrawingLayer(pageNum) {
+                const canvasWrapper = document.getElementById(`wrapper-${pageNum}`);
+                if (!canvasWrapper) return null;
+                
+                let drawingLayer = canvasWrapper.querySelector('.annotation-layer');
+                if (!drawingLayer) {
+                    drawingLayer = document.createElement('canvas');
+                    drawingLayer.className = 'annotation-layer';
+                    drawingLayer.width = canvasWrapper.querySelector('.documentCanvas').width;
+                    drawingLayer.height = canvasWrapper.querySelector('.documentCanvas').height;
+                    canvasWrapper.appendChild(drawingLayer);
+                }
+                return drawingLayer;
+            }
+            
+            function startDrawing(e, pageNum) {
+                if (!sessionCode) {
+                    alert('Please join a session first to enable drawing');
+                    return;
+                }
+                
+                isAnnotating = true;
+                const drawingLayer = createDrawingLayer(pageNum);
+                if (!drawingLayer) return;
+                
+                const ctx = drawingLayer.getContext('2d');
+                const rect = drawingLayer.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.strokeStyle = currentTool === 'correction-eraser' ? '#ffffff' : currentColor;
+                ctx.lineWidth = currentSize;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.globalAlpha = currentTool === 'study-highlighter' ? 0.3 : 1;
+                
+                // Emit drawing start to other users
+                socket.emit('drawing:start', {
+                    sessionCode,
+                    pageNum,
+                    x,
+                    y,
+                    tool: currentTool,
+                    color: currentColor,
+                    size: currentSize
+                });
+            }
+            
+            function draw(e, pageNum) {
+                if (!isAnnotating) return;
+                
+                const drawingLayer = createDrawingLayer(pageNum);
+                if (!drawingLayer) return;
+                
+                const ctx = drawingLayer.getContext('2d');
+                const rect = drawingLayer.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                
+                // Emit drawing point to other users
+                socket.emit('drawing:point', {
+                    sessionCode,
+                    pageNum,
+                    x,
+                    y
+                });
+            }
+            
+            function stopDrawing(pageNum) {
+                if (!isAnnotating) return;
+                isAnnotating = false;
+                
+                // Emit drawing end to other users
+                socket.emit('drawing:end', {
+                    sessionCode,
+                    pageNum
+                });
+            }
+            
+            // Session code functionality
+            function showSessionCodeInput() {
+                sessionContainer.classList.add('active');
+            }
+            
+            function hideSessionCodeInput() {
+                sessionContainer.classList.remove('active');
+                sessionCodeInput.value = '';
+            }
+            
+            function joinSession() {
+                const code = sessionCodeInput.value.trim();
+                if (!code) {
+                    alert('Please enter a session code');
+                    return;
+                }
+                
+                // Connect to WebSocket server
+                socket = io('http://localhost:3000', {
+                    query: { sessionCode: code }
+                });
+                
+                socket.on('connect', () => {
+                    sessionCode = code;
+                    hideSessionCodeInput();
+                    alert('Successfully joined session!');
+                });
+                
+                socket.on('drawing:start', (data) => {
+                    if (data.sessionCode === sessionCode) {
+                        const drawingLayer = createDrawingLayer(data.pageNum);
+                        if (!drawingLayer) return;
+                        
+                        const ctx = drawingLayer.getContext('2d');
+                        ctx.beginPath();
+                        ctx.moveTo(data.x, data.y);
+                        ctx.strokeStyle = data.tool === 'correction-eraser' ? '#ffffff' : data.color;
+                        ctx.lineWidth = data.size;
+                        ctx.lineCap = 'round';
+                        ctx.lineJoin = 'round';
+                        ctx.globalAlpha = data.tool === 'study-highlighter' ? 0.3 : 1;
+                    }
+                });
+                
+                socket.on('drawing:point', (data) => {
+                    if (data.sessionCode === sessionCode) {
+                        const drawingLayer = createDrawingLayer(data.pageNum);
+                        if (!drawingLayer) return;
+                        
+                        const ctx = drawingLayer.getContext('2d');
+                        ctx.lineTo(data.x, data.y);
+                        ctx.stroke();
+                    }
+                });
+                
+                socket.on('drawing:end', (data) => {
+                    if (data.sessionCode === sessionCode) {
+                        const drawingLayer = createDrawingLayer(data.pageNum);
+                        if (!drawingLayer) return;
+                        
+                        const ctx = drawingLayer.getContext('2d');
+                        ctx.closePath();
+                    }
+                });
+                
+                socket.on('drawing:clear', (data) => {
+                    if (data.sessionCode === sessionCode) {
+                        const drawingLayer = createDrawingLayer(data.pageNum);
+                        if (!drawingLayer) return;
+                        
+                        const ctx = drawingLayer.getContext('2d');
+                        ctx.clearRect(0, 0, drawingLayer.width, drawingLayer.height);
+                    }
+                });
+            }
+            
+            // Event listeners for session code
+            sessionCodeBtn.addEventListener('click', showSessionCodeInput);
+            joinSessionBtn.addEventListener('click', joinSession);
+            cancelJoinBtn.addEventListener('click', hideSessionCodeInput);
+            
+            // Clear drawings
+            clearAnnotationsBtn.addEventListener('click', () => {
+                if (!sessionCode) {
+                    alert('Please join a session first to enable drawing');
+                    return;
+                }
+                
+                const drawingLayer = createDrawingLayer(currentPage);
+                if (!drawingLayer) return;
+                
+                const ctx = drawingLayer.getContext('2d');
+                ctx.clearRect(0, 0, drawingLayer.width, drawingLayer.height);
+                
+                // Emit clear event to other users
+                socket.emit('drawing:clear', {
+                    sessionCode,
+                    pageNum: currentPage
+                });
+            });
+            
+            // Modify renderPage function to add drawing event listeners
+            const originalRenderPage = renderPage;
+            renderPage = function(pageNum) {
+                originalRenderPage(pageNum).then(() => {
+                    const canvasWrapper = document.getElementById(`wrapper-${pageNum}`);
+                    if (!canvasWrapper) return;
+                    
+                    const drawingLayer = createDrawingLayer(pageNum);
+                    if (!drawingLayer) return;
+                    
+                    drawingLayer.addEventListener('mousedown', (e) => startDrawing(e, pageNum));
+                    drawingLayer.addEventListener('mousemove', (e) => draw(e, pageNum));
+                    drawingLayer.addEventListener('mouseup', () => stopDrawing(pageNum));
+                    drawingLayer.addEventListener('mouseleave', () => stopDrawing(pageNum));
+                });
+            };
+            
+            // Show submission modal
+            handInBtn.addEventListener('click', () => {
+                if (!sessionCode) {
+                    alert('Please join a session first to hand in the work');
+                    return;
+                }
+                submissionModal.classList.add('active');
+            });
+            
+            // Hide submission modal
+            cancelHandInBtn.addEventListener('click', () => {
+                submissionModal.classList.remove('active');
+            });
+            
+            // Handle submission
+            confirmHandInBtn.addEventListener('click', async () => {
+                try {
+                    // Get all annotation layers
+                    const annotations = {};
+                    const pages = document.querySelectorAll('.canvas-container');
+                    
+                    pages.forEach((page, index) => {
+                        const drawingLayer = page.querySelector('.annotation-layer');
+                        if (drawingLayer) {
+                            annotations[index + 1] = drawingLayer.toDataURL();
+                        }
+                    });
+                    
+                    // Create form data
+                    const formData = new FormData();
+                    formData.append('learningTaskId', assignment.id);
+                    formData.append('annotations', JSON.stringify(annotations));
+                    formData.append('document', pdfData.data);
+                    
+                    // Submit to server
+                    const response = await fetch('/api/academic-work', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        },
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Submission failed');
+                    }
+                    
+                    const result = await response.json();
+                    
+                    // Show success message
+                    alert('Work handed in successfully!');
+                    
+                    // Close viewer
+                    window.close();
+                    if (!window.closed) {
+                        window.location.href = document.referrer || 'learner-dashboard.html';
+                    }
+                    
+                } catch (error) {
+                    log(`Error handing in work: ${error.message}`, true);
+                    alert('Failed to hand in work. Please try again.');
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

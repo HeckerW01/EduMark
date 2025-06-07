@@ -1,0 +1,41 @@
+# Development and documentation files
+*.md
+README.md
+DEPLOYMENT.md
+AUTH_README.md
+AUTH_FIX_INSTRUCTIONS.md
+DEBUG_INSTRUCTIONS.md
+INSTRUCTIONS.md
+
+# Build and deployment files
+package.json
+package-lock.json
+.surgeignore
+netlify.toml
+
+# Temporary and test files
+temp_data/
+*.zip
+test-*.html
+*-test.html
+test_*.html
+
+# Debug and setup files
+debug-*.js
+setup-*.js
+*-debug.js
+setup.html
+clear-data.*
+reset-auth.html
+storage-test.html
+auth-fix.js
+debug-helper.js
+assignment-viewer-debug.js
+
+# Node modules (if any)
+node_modules/
+
+# System files
+.DS_Store
+Thumbs.db
+.git/ 

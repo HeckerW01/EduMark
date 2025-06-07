@@ -1,0 +1,14 @@
+{
+  "name": "classpdf-ai-lambda",
+  "version": "1.0.0",
+  "description": "Lambda function for ClassPDF AI chat using Gemma 3 27B",
+  "main": "ai-chat.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "child_process": "^1.0.2"
+  },
+  "author": "",
+  "license": "ISC"
+} 

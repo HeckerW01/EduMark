@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset ClassPDF Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        button {
+            background-color: #f44336;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+            margin-top: 20px;
+            display: none;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow: auto;
+            max-height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Reset ClassPDF Auth Data</h1>
+    <p>This page will reset all authentication data stored in localStorage.</p>
+    
+    <div>
+        <h2>Current localStorage Data:</h2>
+        <pre id="current-data"></pre>
+    </div>
+    
+    <button id="reset-btn">Reset All Data</button>
+    <p id="success-message" class="success">All data has been reset successfully!</p>
+    
+    <div>
+        <h2>After Reset:</h2>
+        <pre id="after-data"></pre>
+    </div>
+    
+    <script>
+        // Display current localStorage data
+        function displayLocalStorage(elementId) {
+            const element = document.getElementById(elementId);
+            let output = '';
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                let value = localStorage.getItem(key);
+                
+                try {
+                    // Try to parse JSON
+                    const parsedValue = JSON.parse(value);
+                    value = JSON.stringify(parsedValue, null, 2);
+                } catch (e) {
+                    // Not JSON, use as is
+                }
+                
+                output += `// ${key}\n${value}\n\n`;
+            }
+            
+            element.textContent = output || 'No data in localStorage';
+        }
+        
+        // Initial display
+        document.addEventListener('DOMContentLoaded', function() {
+            displayLocalStorage('current-data');
+            
+            // Reset button
+            document.getElementById('reset-btn').addEventListener('click', function() {
+                // Clear all localStorage data
+                localStorage.clear();
+                
+                // Show success message
+                const successMessage = document.getElementById('success-message');
+                successMessage.style.display = 'block';
+                
+                // Update display
+                displayLocalStorage('after-data');
+                
+                // After 2 seconds, redirect to index.html
+                setTimeout(function() {
+                    window.location.href = 'index.html';
+                }, 3000);
+            });
+        });
+    </script>
+</body>
+</html> 

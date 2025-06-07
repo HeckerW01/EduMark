@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced PDF Viewer - ClassPDF</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .pdf-container {
+            width: 100%;
+            height: calc(100vh - 110px);
+            overflow: auto;
+            background-color: #525659;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px 0;
+        }
+        
+        .canvas-container {
+            position: relative;
+            margin-bottom: 10px;
+        }
+        
+        .pdfCanvas {
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            background-color: white;
+        }
+        
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .pdf-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+            gap: 10px;
+        }
+        
+        .pdf-title {
+            font-weight: bold;
+            font-size: 18px;
+            margin: 0;
+        }
+        
+        .toolbar-actions, .pdf-nav {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .pdf-page-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        #page-num, #page-count {
+            margin: 0;
+        }
+        
+        #page-input {
+            width: 50px;
+            padding: 4px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .btn {
+            padding: 6px 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .btn:hover {
+            background-color: var(--primary-color-dark);
+        }
+        
+        .btn.secondary {
+            background-color: #6c757d;
+        }
+        
+        .btn.secondary:hover {
+            background-color: #5a6268;
+        }
+        
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        #zoom-level {
+            width: 60px;
+            padding: 4px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: var(--primary-color);
+            animation: spin 1s linear infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+        
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">ClassPDF</div>
+        <div class="user-info">
+            <button id="close-btn" class="btn secondary">Close Viewer</button>
+        </div>
+    </header>
+    
+    <div class="toolbar">
+        <h1 class="pdf-title" id="pdf-title">PDF Viewer</h1>
+        <div class="toolbar-actions">
+            <button id="download-btn" class="btn">Download</button>
+        </div>
+    </div>
+    
+    <div class="pdf-controls">
+        <div class="pdf-nav">
+            <button id="prev-page" class="btn">Previous</button>
+            <div class="pdf-page-info">
+                <input type="number" id="page-input" min="1" value="1">
+                <span>of</span>
+                <span id="page-count">0</span>
+            </div>
+            <button id="next-page" class="btn">Next</button>
+        </div>
+        
+        <div class="zoom-controls">
+            <button id="zoom-out" class="btn">-</button>
+            <input type="text" id="zoom-level" value="100%" readonly>
+            <button id="zoom-in" class="btn">+</button>
+        </div>
+    </div>
+    
+    <div class="pdf-container" id="pdf-container">
+        <div class="spinner" id="spinner"></div>
+        <!-- PDF pages will be rendered here -->
+    </div>
+    
+    <script src="js/pdf.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("Advanced PDF Viewer script loaded");
+            
+            // DOM Elements
+            const pdfTitle = document.getElementById('pdf-title');
+            const pdfContainer = document.getElementById('pdf-container');
+            const downloadBtn = document.getElementById('download-btn');
+            const closeBtn = document.getElementById('close-btn');
+            const prevPageBtn = document.getElementById('prev-page');
+            const nextPageBtn = document.getElementById('next-page');
+            const pageInput = document.getElementById('page-input');
+            const pageCount = document.getElementById('page-count');
+            const zoomInBtn = document.getElementById('zoom-in');
+            const zoomOutBtn = document.getElementById('zoom-out');
+            const zoomLevel = document.getElementById('zoom-level');
+            const spinner = document.getElementById('spinner');
+            
+            // PDF.js setup
+            const pdfjsLib = window['pdfjs-dist/build/pdf'];
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'js/pdf.worker.min.js';
+            
+            // PDF state variables
+            let pdfDoc = null;
+            let pdfData = null;
+            let currentPage = 1;
+            let scale = 1.0;
+            let pageRendering = false;
+            let pageNumPending = null;
+            
+            // Get PDF data from session storage
+            pdfData = JSON.parse(sessionStorage.getItem('currentViewPdf') || '{}');
+            const assignment = JSON.parse(sessionStorage.getItem('currentAssignment') || 'null');
+            
+            if (!pdfData || !pdfData.data) {
+                pdfTitle.textContent = 'PDF not found';
+                return;
+            }
+            
+            // Set the PDF title
+            pdfTitle.textContent = assignment ? assignment.title : pdfData.name;
+            
+            // Show loading spinner
+            spinner.style.display = 'block';
+            
+            // Load the PDF
+            const loadingTask = pdfjsLib.getDocument({ data: atob(pdfData.data.split(',')[1]) });
+            
+            loadingTask.promise.then(function(pdf) {
+                pdfDoc = pdf;
+                pageCount.textContent = pdf.numPages;
+                pageInput.max = pdf.numPages;
+                
+                // Hide spinner
+                spinner.style.display = 'none';
+                
+                // Render the first page
+                renderPage(currentPage);
+            }).catch(function(error) {
+                console.error('Error loading PDF:', error);
+                pdfContainer.innerHTML = `<p class="error-message">Error loading PDF: ${error.message}</p>`;
+                spinner.style.display = 'none';
+            });
+            
+            function renderPage(pageNum) {
+                pageRendering = true;
+                
+                // Show loading spinner
+                spinner.style.display = 'block';
+                
+                // Get the page
+                pdfDoc.getPage(pageNum).then(function(page) {
+                    // Calculate viewport dimensions for the current scale
+                    const viewport = page.getViewport({ scale: scale });
+                    
+                    // Create or get the canvas for this page
+                    let canvas = document.getElementById(`page-${pageNum}`);
+                    let canvasWrapper;
+                    
+                    if (!canvas) {
+                        // Create a new canvas if it doesn't exist
+                        canvasWrapper = document.createElement('div');
+                        canvasWrapper.className = 'canvas-container';
+                        canvasWrapper.id = `wrapper-${pageNum}`;
+                        
+                        canvas = document.createElement('canvas');
+                        canvas.className = 'pdfCanvas';
+                        canvas.id = `page-${pageNum}`;
+                        
+                        canvasWrapper.appendChild(canvas);
+                        pdfContainer.appendChild(canvasWrapper);
+                    } else {
+                        canvasWrapper = document.getElementById(`wrapper-${pageNum}`);
+                    }
+                    
+                    // Set canvas dimensions to match the page
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    
+                    // Render the PDF page into the canvas
+                    const renderContext = {
+                        canvasContext: canvas.getContext('2d'),
+                        viewport: viewport
+                    };
+                    
+                    const renderTask = page.render(renderContext);
+                    
+                    // Wait for rendering to finish
+                    renderTask.promise.then(function() {
+                        pageRendering = false;
+                        
+                        // Hide spinner
+                        spinner.style.display = 'none';
+                        
+                        // Scroll to the current page
+                        canvasWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        
+                        // Update page input to show current page
+                        pageInput.value = pageNum;
+                        
+                        // If another page is pending, render it
+                        if (pageNumPending !== null) {
+                            renderPage(pageNumPending);
+                            pageNumPending = null;
+                        }
+                    }).catch(function(error) {
+                        console.error('Error rendering page:', error);
+                        spinner.style.display = 'none';
+                        pageRendering = false;
+                    });
+                });
+            }
+            
+            // Change page function
+            function queueRenderPage(pageNum) {
+                if (pageRendering) {
+                    pageNumPending = pageNum;
+                } else {
+                    renderPage(pageNum);
+                }
+            }
+            
+            // Go to previous page
+            prevPageBtn.addEventListener('click', () => {
+                if (currentPage <= 1) return;
+                currentPage--;
+                queueRenderPage(currentPage);
+            });
+            
+            // Go to next page
+            nextPageBtn.addEventListener('click', () => {
+                if (currentPage >= pdfDoc.numPages) return;
+                currentPage++;
+                queueRenderPage(currentPage);
+            });
+            
+            // Go to specific page when input changes
+            pageInput.addEventListener('change', () => {
+                const pageNum = parseInt(pageInput.value);
+                if (pageNum >= 1 && pageNum <= pdfDoc.numPages) {
+                    currentPage = pageNum;
+                    queueRenderPage(currentPage);
+                } else {
+                    // Reset to valid value
+                    pageInput.value = currentPage;
+                }
+            });
+            
+            // Zoom controls
+            zoomInBtn.addEventListener('click', () => {
+                if (scale >= 3.0) return; // Maximum zoom
+                scale += 0.25;
+                zoomLevel.value = `${Math.round(scale * 100)}%`;
+                
+                // Re-render the current page with new scale
+                queueRenderPage(currentPage);
+            });
+            
+            zoomOutBtn.addEventListener('click', () => {
+                if (scale <= 0.5) return; // Minimum zoom
+                scale -= 0.25;
+                zoomLevel.value = `${Math.round(scale * 100)}%`;
+                
+                // Re-render the current page with new scale
+                queueRenderPage(currentPage);
+            });
+            
+            // Download button
+            downloadBtn.addEventListener('click', () => {
+                // Create a temporary link element
+                const a = document.createElement('a');
+                a.href = pdfData.data;
+                a.download = pdfData.name || 'document.pdf';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            });
+            
+            // Close button
+            closeBtn.addEventListener('click', () => {
+                window.close();
+                // Fallback if window.close() is blocked
+                if (!window.closed) {
+                    window.location.href = document.referrer || 'teacher-dashboard.html';
+                }
+            });
+            
+            // Handle keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                // Left arrow for previous page
+                if (e.key === 'ArrowLeft') {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        queueRenderPage(currentPage);
+                    }
+                }
+                // Right arrow for next page
+                else if (e.key === 'ArrowRight') {
+                    if (currentPage < pdfDoc.numPages) {
+                        currentPage++;
+                        queueRenderPage(currentPage);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

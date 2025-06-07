@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Upload Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .upload-area.highlight {
+            border-color: #3498db;
+            background-color: rgba(52, 152, 219, 0.05);
+        }
+        .file-input {
+            display: none;
+        }
+        .upload-button {
+            display: inline-block;
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .result-container {
+            margin-top: 20px;
+        }
+        .pdf-preview {
+            width: 100%;
+            height: 400px;
+            border: 1px solid #ddd;
+        }
+        .logs {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>PDF Upload Test</h1>
+    
+    <div class="upload-area" id="drop-area">
+        <p>Drag and drop a PDF file here or</p>
+        <input type="file" id="fileElem" accept="application/pdf" class="file-input">
+        <label for="fileElem" class="upload-button">Browse Files</label>
+    </div>
+    
+    <div class="result-container">
+        <h2>Upload Result:</h2>
+        <div id="result"></div>
+        <h3>PDF Preview:</h3>
+        <iframe id="pdf-preview" class="pdf-preview"></iframe>
+    </div>
+    
+    <div class="logs" id="logs"></div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dropArea = document.getElementById('drop-area');
+            const fileInput = document.getElementById('fileElem');
+            const resultDiv = document.getElementById('result');
+            const pdfPreview = document.getElementById('pdf-preview');
+            const logsDiv = document.getElementById('logs');
+            
+            function log(message) {
+                const time = new Date().toLocaleTimeString();
+                logsDiv.innerHTML += `<div>[${time}] ${message}</div>`;
+                logsDiv.scrollTop = logsDiv.scrollHeight;
+                console.log(message);
+            }
+            
+            log("PDF Upload Test initialized");
+            
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            // Highlight drop area when item is dragged over
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => {
+                    log("File dragged over drop area");
+                    dropArea.classList.add('highlight');
+                });
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => {
+                    dropArea.classList.remove('highlight');
+                });
+            });
+            
+            // Handle dropped files
+            dropArea.addEventListener('drop', handleDrop);
+            
+            function handleDrop(e) {
+                log("File dropped");
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleFiles(files);
+            }
+            
+            fileInput.addEventListener('change', () => {
+                log("File selected via input: " + fileInput.files[0]?.name);
+                handleFiles(fileInput.files);
+            });
+            
+            function handleFiles(files) {
+                log("Handling files: " + files.length);
+                if (files.length > 0) {
+                    const file = files[0];
+                    if (file.type === 'application/pdf') {
+                        uploadFile(file);
+                    } else {
+                        resultDiv.innerHTML = '<p style="color: red;">Only PDF files are accepted!</p>';
+                        log("Error: File is not a PDF. Type: " + file.type);
+                    }
+                }
+            }
+            
+            function uploadFile(file) {
+                log("Processing PDF file: " + file.name + " (" + file.type + ")");
+                
+                // Create a reader to get the file data
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const fileData = e.target.result;
+                    log("File read successfully, data length: " + fileData.length);
+                    
+                    // Display result
+                    resultDiv.innerHTML = `
+                        <p>File: ${file.name}</p>
+                        <p>Size: ${formatFileSize(file.size)}</p>
+                        <p>Type: ${file.type}</p>
+                    `;
+                    
+                    // Show PDF in iframe
+                    pdfPreview.src = fileData;
+                    
+                    // Store in localStorage for testing
+                    try {
+                        const uploads = JSON.parse(localStorage.getItem('testUploads') || '[]');
+                        const newUpload = {
+                            id: Date.now().toString(),
+                            name: file.name,
+                            size: file.size,
+                            uploadedAt: new Date().toISOString(),
+                            data: fileData
+                        };
+                        
+                        uploads.push(newUpload);
+                        localStorage.setItem('testUploads', JSON.stringify(uploads));
+                        log("PDF stored in localStorage with id: " + newUpload.id);
+                    } catch (err) {
+                        log("Error storing in localStorage: " + err.message);
+                    }
+                };
+                
+                reader.onerror = function(err) {
+                    log("Error reading file: " + err);
+                    resultDiv.innerHTML = '<p style="color: red;">Error reading file. Please try again.</p>';
+                };
+                
+                // Read the file as data URL
+                reader.readAsDataURL(file);
+                log("Started reading file as data URL");
+            }
+            
+            function formatFileSize(bytes) {
+                if (bytes < 1024) return bytes + ' bytes';
+                else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                else return (bytes / 1048576).toFixed(1) + ' MB';
+            }
+        });
+    </script>
+</body>
+</html> 

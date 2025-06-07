@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduMark Gemma Lambda Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f9f9f9;
+        }
+        .error {
+            color: red;
+            background: #ffebee;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 EduMark Gemma Lambda Test</h1>
+        
+        <div class="input-group">
+            <label for="apiUrl">Lambda API URL:</label>
+            <input type="text" id="apiUrl" placeholder="https://your-api-id.execute-api.region.amazonaws.com/prod">
+        </div>
+
+        <div class="input-group">
+            <label for="message">Test Message:</label>
+            <input type="text" id="message" placeholder="Enter a test message...">
+        </div>
+
+        <button onclick="testLambda()">Test Lambda</button>
+        <button onclick="testEducational()">Test Educational</button>
+        <button onclick="testMath()">Test Math</button>
+
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function testLambda() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const message = document.getElementById('message').value;
+            const resultDiv = document.getElementById('result');
+
+            if (!apiUrl || !message) {
+                showError('Please enter both API URL and message');
+                return;
+            }
+
+            try {
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = 'Testing...';
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        history: []
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <h3>✅ Success!</h3>
+                        <p><strong>Response:</strong> ${data.response}</p>
+                        <p><strong>Model:</strong> ${data.model}</p>
+                        <p><strong>Status:</strong> ${data.status}</p>
+                    `;
+                } else {
+                    showError(`Error: ${data.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                showError(`Error: ${error.message}`);
+            }
+        }
+
+        function testEducational() {
+            document.getElementById('message').value = 'Can you help me understand photosynthesis?';
+            testLambda();
+        }
+
+        function testMath() {
+            document.getElementById('message').value = 'How do I solve quadratic equations?';
+            testLambda();
+        }
+
+        function showError(message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `<div class="error">${message}</div>`;
+        }
+    </script>
+</body>
+</html> 

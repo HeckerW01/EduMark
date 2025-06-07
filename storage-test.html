@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storage Test Utility - ClassPDF</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #3498db;
+        }
+        .section {
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button.danger {
+            background-color: #e74c3c;
+        }
+        button.danger:hover {
+            background-color: #c0392b;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .storage-info {
+            margin-bottom: 15px;
+        }
+        .storage-action {
+            margin-bottom: 20px;
+        }
+        #logs {
+            font-family: monospace;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            height: 200px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <h1>ClassPDF Storage Test Utility</h1>
+    
+    <div class="section">
+        <h2>LocalStorage Status</h2>
+        <div class="storage-info">
+            <div id="storage-status"></div>
+        </div>
+        
+        <div class="storage-action">
+            <button id="refresh-btn">Refresh Status</button>
+            <button id="test-storage-btn">Test Storage Access</button>
+        </div>
+        
+        <div class="storage-action">
+            <h3>Storage Keys</h3>
+            <div id="storage-keys"></div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>PDF Storage</h2>
+        <div class="storage-action">
+            <button id="view-pdfs-btn">View Stored PDFs</button>
+            <button id="create-sample-btn">Create Sample PDF Entry</button>
+        </div>
+        <div id="pdf-list"></div>
+    </div>
+    
+    <div class="section">
+        <h2>User Accounts</h2>
+        <div class="storage-action">
+            <button id="view-accounts-btn">View User Accounts</button>
+            <button id="create-teacher-btn">Create Test Teacher Account</button>
+            <button id="create-student-btn">Create Test Student Account</button>
+        </div>
+        <div id="accounts-list"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Reset Tools</h2>
+        <div class="storage-action">
+            <button id="clear-pdfs-btn" class="danger">Clear PDF Storage</button>
+            <button id="clear-accounts-btn" class="danger">Clear User Accounts</button>
+            <button id="clear-all-btn" class="danger">Clear All Storage</button>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>Logs</h2>
+        <div id="logs"></div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const storageStatusEl = document.getElementById('storage-status');
+            const storageKeysEl = document.getElementById('storage-keys');
+            const pdfListEl = document.getElementById('pdf-list');
+            const accountsListEl = document.getElementById('accounts-list');
+            const logsEl = document.getElementById('logs');
+            
+            // Log function
+            function log(message, type = 'info') {
+                const date = new Date();
+                const time = date.toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.innerHTML = `<span>[${time}] ${type.toUpperCase()}:</span> ${message}`;
+                logEntry.style.color = type === 'error' ? '#e74c3c' : type === 'warning' ? '#f39c12' : '#2980b9';
+                logsEl.appendChild(logEntry);
+                logsEl.scrollTop = logsEl.scrollHeight;
+                console.log(`[${type.toUpperCase()}] ${message}`);
+            }
+            
+            // Initialize
+            log('Storage Test Utility initialized');
+            
+            // Check localStorage availability
+            function checkStorage() {
+                try {
+                    const testKey = '__storage_test__';
+                    localStorage.setItem(testKey, testKey);
+                    localStorage.removeItem(testKey);
+                    
+                    // Get storage usage
+                    let totalSize = 0;
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        const value = localStorage.getItem(key);
+                        totalSize += key.length + value.length;
+                    }
+                    
+                    // Convert to KB or MB
+                    let sizeText;
+                    if (totalSize < 1024) {
+                        sizeText = `${totalSize} bytes`;
+                    } else if (totalSize < 1048576) {
+                        sizeText = `${(totalSize / 1024).toFixed(2)} KB`;
+                    } else {
+                        sizeText = `${(totalSize / 1048576).toFixed(2)} MB`;
+                    }
+                    
+                    // Check if close to 5MB limit
+                    const percentUsed = (totalSize / 5242880) * 100;
+                    let statusClass = 'success';
+                    let statusMessage = 'Good';
+                    
+                    if (percentUsed > 90) {
+                        statusClass = 'error';
+                        statusMessage = 'Critical (>90%)';
+                    } else if (percentUsed > 70) {
+                        statusClass = 'warning';
+                        statusMessage = 'Warning (>70%)';
+                    }
+                    
+                    storageStatusEl.innerHTML = `
+                        <div class="status ${statusClass}">
+                            <strong>Status:</strong> ${statusMessage}<br>
+                            <strong>Used:</strong> ${sizeText} (${percentUsed.toFixed(2)}% of 5MB limit)<br>
+                            <strong>Items:</strong> ${localStorage.length}
+                        </div>
+                    `;
+                    
+                    log(`LocalStorage is available. Using ${sizeText} (${percentUsed.toFixed(2)}% of 5MB limit)`);
+                    return true;
+                } catch (e) {
+                    storageStatusEl.innerHTML = `
+                        <div class="status error">
+                            <strong>Error:</strong> LocalStorage is not available.<br>
+                            <strong>Reason:</strong> ${e.message}
+                        </div>
+                    `;
+                    log(`LocalStorage is not available: ${e.message}`, 'error');
+                    return false;
+                }
+            }
+            
+            // Display all localStorage keys
+            function displayStorageKeys() {
+                const keys = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    const value = localStorage.getItem(key);
+                    const size = key.length + value.length;
+                    
+                    // Format size
+                    let sizeText;
+                    if (size < 1024) {
+                        sizeText = `${size} bytes`;
+                    } else if (size < 1048576) {
+                        sizeText = `${(size / 1024).toFixed(2)} KB`;
+                    } else {
+                        sizeText = `${(size / 1048576).toFixed(2)} MB`;
+                    }
+                    
+                    keys.push({ key, size, sizeText });
+                }
+                
+                // Sort by size (largest first)
+                keys.sort((a, b) => b.size - a.size);
+                
+                let html = '<table><tr><th>Key</th><th>Size</th></tr>';
+                keys.forEach(item => {
+                    html += `<tr><td>${item.key}</td><td>${item.sizeText}</td></tr>`;
+                });
+                html += '</table>';
+                
+                storageKeysEl.innerHTML = html;
+                log(`Found ${keys.length} storage keys`);
+            }
+            
+            // Display PDF entries
+            function displayPDFs() {
+                try {
+                    // Check multiple possible storage keys for PDFs
+                    const potentialKeys = ['teacherUploads', 'studentUploads', 'testUploads'];
+                    let allPdfs = [];
+                    
+                    potentialKeys.forEach(key => {
+                        try {
+                            const pdfs = JSON.parse(localStorage.getItem(key) || '[]');
+                            if (pdfs.length > 0) {
+                                pdfs.forEach(pdf => {
+                                    // Add the source to each PDF
+                                    pdf.source = key;
+                                    allPdfs.push(pdf);
+                                });
+                            }
+                        } catch (err) {
+                            log(`Error parsing ${key}: ${err.message}`, 'error');
+                        }
+                    });
+                    
+                    if (allPdfs.length === 0) {
+                        pdfListEl.innerHTML = '<div class="status warning">No PDFs found in storage.</div>';
+                        log('No PDFs found in storage', 'warning');
+                        return;
+                    }
+                    
+                    // Create table with PDF info
+                    let html = '<table><tr><th>ID</th><th>Name</th><th>Size</th><th>Source</th><th>Actions</th></tr>';
+                    allPdfs.forEach(pdf => {
+                        const dataSize = pdf.data ? pdf.data.length : 'N/A';
+                        const formattedSize = formatFileSize(pdf.size);
+                        const dataStatusClass = pdf.data ? 'success' : 'error';
+                        const dataStatus = pdf.data ? 'Available' : 'Missing';
+                        
+                        html += `
+                            <tr>
+                                <td>${pdf.id}</td>
+                                <td>${pdf.name}</td>
+                                <td>${formattedSize}</td>
+                                <td>${pdf.source}</td>
+                                <td>
+                                    <button class="view-pdf-btn" data-id="${pdf.id}" data-source="${pdf.source}">View</button>
+                                    <button class="delete-pdf-btn" data-id="${pdf.id}" data-source="${pdf.source}">Delete</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    html += '</table>';
+                    
+                    pdfListEl.innerHTML = html;
+                    log(`Found ${allPdfs.length} PDFs in storage`);
+                    
+                    // Add event listeners to buttons
+                    document.querySelectorAll('.view-pdf-btn').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const id = this.getAttribute('data-id');
+                            const source = this.getAttribute('data-source');
+                            viewPDF(id, source);
+                        });
+                    });
+                    
+                    document.querySelectorAll('.delete-pdf-btn').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const id = this.getAttribute('data-id');
+                            const source = this.getAttribute('data-source');
+                            deletePDF(id, source);
+                        });
+                    });
+                } catch (err) {
+                    pdfListEl.innerHTML = `<div class="status error">Error loading PDFs: ${err.message}</div>`;
+                    log(`Error loading PDFs: ${err.message}`, 'error');
+                }
+            }
+            
+            // View PDF
+            function viewPDF(id, source) {
+                try {
+                    const pdfs = JSON.parse(localStorage.getItem(source) || '[]');
+                    const pdf = pdfs.find(p => p.id === id);
+                    
+                    if (!pdf) {
+                        throw new Error(`PDF with ID ${id} not found in ${source}`);
+                    }
+                    
+                    if (!pdf.data) {
+                        throw new Error(`PDF data is missing for ${pdf.name}`);
+                    }
+                    
+                    // Store in session storage for the viewer
+                    sessionStorage.setItem('currentViewPdf', JSON.stringify(pdf));
+                    window.open('pdf-viewer.html', '_blank');
+                    log(`Opened PDF ${pdf.name} in viewer`);
+                } catch (err) {
+                    log(`Error viewing PDF: ${err.message}`, 'error');
+                    alert(`Error viewing PDF: ${err.message}`);
+                }
+            }
+            
+            // Delete PDF
+            function deletePDF(id, source) {
+                try {
+                    if (!confirm(`Are you sure you want to delete this PDF from ${source}?`)) {
+                        return;
+                    }
+                    
+                    const pdfs = JSON.parse(localStorage.getItem(source) || '[]');
+                    const updatedPdfs = pdfs.filter(p => p.id !== id);
+                    
+                    localStorage.setItem(source, JSON.stringify(updatedPdfs));
+                    log(`Deleted PDF with ID ${id} from ${source}`);
+                    displayPDFs();
+                } catch (err) {
+                    log(`Error deleting PDF: ${err.message}`, 'error');
+                    alert(`Error deleting PDF: ${err.message}`);
+                }
+            }
+            
+            // View user accounts
+            function displayAccounts() {
+                try {
+                    const accounts = JSON.parse(localStorage.getItem('userAccounts') || '[]');
+                    
+                    if (accounts.length === 0) {
+                        accountsListEl.innerHTML = '<div class="status warning">No user accounts found in storage.</div>';
+                        log('No user accounts found', 'warning');
+                        return;
+                    }
+                    
+                    // Create table with account info
+                    let html = '<table><tr><th>Username</th><th>Type</th><th>Password</th><th>Actions</th></tr>';
+                    accounts.forEach(account => {
+                        html += `
+                            <tr>
+                                <td>${account.username}</td>
+                                <td>${account.type}</td>
+                                <td>${account.password}</td>
+                                <td>
+                                    <button class="login-as-btn" data-username="${account.username}" data-type="${account.type}">Login As</button>
+                                    <button class="delete-account-btn" data-username="${account.username}">Delete</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    html += '</table>';
+                    
+                    accountsListEl.innerHTML = html;
+                    log(`Found ${accounts.length} user accounts`);
+                    
+                    // Add event listeners
+                    document.querySelectorAll('.login-as-btn').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const username = this.getAttribute('data-username');
+                            const type = this.getAttribute('data-type');
+                            loginAs(username, type);
+                        });
+                    });
+                    
+                    document.querySelectorAll('.delete-account-btn').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const username = this.getAttribute('data-username');
+                            deleteAccount(username);
+                        });
+                    });
+                } catch (err) {
+                    accountsListEl.innerHTML = `<div class="status error">Error loading accounts: ${err.message}</div>`;
+                    log(`Error loading accounts: ${err.message}`, 'error');
+                }
+            }
+            
+            // Login as user
+            function loginAs(username, type) {
+                try {
+                    localStorage.setItem('username', username);
+                    localStorage.setItem('userType', type);
+                    log(`Set active user to ${username} (${type})`);
+                    
+                    // Redirect to appropriate dashboard
+                    if (confirm(`Logged in as ${username} (${type}). Go to dashboard?`)) {
+                        window.location.href = type === 'teacher' ? 'teacher-dashboard.html' : 'student-dashboard.html';
+                    }
+                } catch (err) {
+                    log(`Error setting user: ${err.message}`, 'error');
+                    alert(`Error: ${err.message}`);
+                }
+            }
+            
+            // Delete account
+            function deleteAccount(username) {
+                try {
+                    if (!confirm(`Are you sure you want to delete the account "${username}"?`)) {
+                        return;
+                    }
+                    
+                    const accounts = JSON.parse(localStorage.getItem('userAccounts') || '[]');
+                    const updatedAccounts = accounts.filter(a => a.username !== username);
+                    
+                    localStorage.setItem('userAccounts', JSON.stringify(updatedAccounts));
+                    log(`Deleted account: ${username}`);
+                    displayAccounts();
+                } catch (err) {
+                    log(`Error deleting account: ${err.message}`, 'error');
+                    alert(`Error: ${err.message}`);
+                }
+            }
+            
+            // Create a sample PDF entry
+            function createSamplePDF() {
+                try {
+                    const samplePdf = {
+                        id: Date.now().toString(),
+                        name: 'Sample PDF.pdf',
+                        size: 152000,
+                        uploadedBy: 'Test User',
+                        uploadedAt: new Date().toISOString(),
+                        // Base64 encoded mini PDF (just a few bytes for testing)
+                        data: 'data:application/pdf;base64,JVBERi0xLjAKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgMCBSL0ZpbHRlci9GbGF0ZURlY29kZT4+CnN0cmVhbQp4nAu0MPHiCnATMDJXMLQyUzA0EbHWN1QwNLIy1jdRsjHQBwBmDwcfCmVuZHN0cmVhbQplbmRvYmoKMyAwIG9iagozNAplbmRvYmoKMSAwIG9iago8PC9UeXBlL1BhZ2UvUGFyZW50IDQgMCBSL1Jlc291cmNlczw8L0ZvbnQ8PC9GMSA1IDAgUj4+Pj4vQ29udGVudHMgMiAwIFI+PgplbmRvYmoKNCAwIG9iago8PC9UeXBlL1BhZ2VzL0NvdW50IDEvS2lkc1sxIDAgUl0+PgplbmRvYmoKNSAwIG9iago8PC9UeXBlL0ZvbnQvU3VidHlwZS9UeXBlMS9CYXNlRm9udC9IZWx2ZXRpY2E+PgplbmRvYmoKNiAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgNCAwIFI+PgplbmRvYmoKNyAwIG9iago8PC9DcmVhdG9yPEZFRkYwMDUzMDA2MTAwNkQwMDcwMDA2QzAwNjU+L1Byb2R1Y2VyPEZFRkYwMDUzMDA2MTAwNkQwMDcwMDA2QzAwNjU+L0NyZWF0aW9uRGF0ZShEOjIwMjQwMTAxMDAwMDAwKT4+CmVuZG9iagp4cmVmCjAgOAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAxMTcgMDAwMDAgbiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDk3IDAwMDAwIG4gCjAwMDAwMDAyMDQgMDAwMDAgbiAKMDAwMDAwMDI1NSAwMDAwMCBuIAowMDAwMDAwMzE2IDAwMDAwIG4gCjAwMDAwMDAzNjAgMDAwMDAgbiAKdHJhaWxlcgo8PC9Sb290IDYgMCBSL0luZm8gNyAwIFIvU2l6ZSA4Pj4Kc3RhcnR4cmVmCjQ2OAolJUVPRgo='
+                    };
+                    
+                    const uploads = JSON.parse(localStorage.getItem('teacherUploads') || '[]');
+                    uploads.push(samplePdf);
+                    localStorage.setItem('teacherUploads', JSON.stringify(uploads));
+                    
+                    log(`Created sample PDF in teacherUploads`);
+                    displayPDFs();
+                } catch (err) {
+                    log(`Error creating sample PDF: ${err.message}`, 'error');
+                    alert(`Error: ${err.message}`);
+                }
+            }
+            
+            // Create test user accounts
+            function createTeacherAccount() {
+                try {
+                    const accounts = JSON.parse(localStorage.getItem('userAccounts') || '[]');
+                    
+                    // Check if account already exists
+                    if (accounts.some(a => a.username === 'teacher')) {
+                        if (!confirm('A teacher account already exists. Create another one?')) {
+                            return;
+                        }
+                    }
+                    
+                    accounts.push({
+                        username: 'teacher',
+                        password: 'password',
+                        type: 'teacher',
+                        createdAt: new Date().toISOString()
+                    });
+                    
+                    localStorage.setItem('userAccounts', JSON.stringify(accounts));
+                    log('Created test teacher account (username: teacher, password: password)');
+                    displayAccounts();
+                } catch (err) {
+                    log(`Error creating teacher account: ${err.message}`, 'error');
+                    alert(`Error: ${err.message}`);
+                }
+            }
+            
+            function createStudentAccount() {
+                try {
+                    const accounts = JSON.parse(localStorage.getItem('userAccounts') || '[]');
+                    
+                    // Check if account already exists
+                    if (accounts.some(a => a.username === 'student')) {
+                        if (!confirm('A student account already exists. Create another one?')) {
+                            return;
+                        }
+                    }
+                    
+                    accounts.push({
+                        username: 'student',
+                        password: 'password',
+                        type: 'student',
+                        createdAt: new Date().toISOString()
+                    });
+                    
+                    localStorage.setItem('userAccounts', JSON.stringify(accounts));
+                    log('Created test student account (username: student, password: password)');
+                    displayAccounts();
+                } catch (err) {
+                    log(`Error creating student account: ${err.message}`, 'error');
+                    alert(`Error: ${err.message}`);
+                }
+            }
+            
+            // Test localStorage access
+            function testStorage() {
+                try {
+                    const testKey = '__test_key__';
+                    const testValue = JSON.stringify({
+                        test: 'value',
+                        timestamp: Date.now()
+                    });
+                    
+                    // Set
+                    localStorage.setItem(testKey, testValue);
+                    log(`Successfully wrote test data to localStorage`);
+                    
+                    // Get
+                    const retrievedValue = localStorage.getItem(testKey);
+                    if (retrievedValue === testValue) {
+                        log(`Successfully read test data from localStorage`);
+                    } else {
+                        throw new Error('Retrieved value does not match stored value');
+                    }
+                    
+                    // Remove
+                    localStorage.removeItem(testKey);
+                    log(`Successfully removed test data from localStorage`);
+                    
+                    alert('LocalStorage test passed successfully!');
+                } catch (err) {
+                    log(`Storage test failed: ${err.message}`, 'error');
+                    alert(`Storage test failed: ${err.message}`);
+                }
+            }
+            
+            // Clear functions
+            function clearPDFs() {
+                try {
+                    if (!confirm('Are you sure you want to clear all PDFs from storage? This cannot be undone.')) {
+                        return;
+                    }
+                    
+                    localStorage.removeItem('teacherUploads');
+                    localStorage.removeItem('studentUploads');
+                    localStorage.removeItem('testUploads');
+                    
+                    log('Cleared all PDFs from storage');
+                    displayPDFs();
+                    checkStorage();
+                    displayStorageKeys();
+                } catch (err) {
+                    log(`Error clearing PDFs: ${err.message}`, 'error');
+                    alert(`Error: ${err.message}`);
+                }
+            }
+            
+            function clearAccounts() {
+                try {
+                    if (!confirm('Are you sure you want to clear all user accounts? This cannot be undone.')) {
+                        return;
+                    }
+                    
+                    localStorage.removeItem('userAccounts');
+                    
+                    log('Cleared all user accounts');
+                    displayAccounts();
+                    checkStorage();
+                    displayStorageKeys();
+                } catch (err) {
+                    log(`Error clearing accounts: ${err.message}`, 'error');
+                    alert(`Error: ${err.message}`);
+                }
+            }
+            
+            function clearAll() {
+                try {
+                    if (!confirm('Are you sure you want to clear ALL data from localStorage? This cannot be undone.')) {
+                        return;
+                    }
+                    
+                    localStorage.clear();
+                    
+                    log('Cleared all data from localStorage');
+                    checkStorage();
+                    displayStorageKeys();
+                    displayPDFs();
+                    displayAccounts();
+                } catch (err) {
+                    log(`Error clearing all data: ${err.message}`, 'error');
+                    alert(`Error: ${err.message}`);
+                }
+            }
+            
+            // Helper function to format file size
+            function formatFileSize(bytes) {
+                if (!bytes) return 'Unknown';
+                if (bytes < 1024) return bytes + ' bytes';
+                else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                else return (bytes / 1048576).toFixed(1) + ' MB';
+            }
+            
+            // Initial checks
+            checkStorage();
+            displayStorageKeys();
+            
+            // Event Listeners
+            document.getElementById('refresh-btn').addEventListener('click', function() {
+                checkStorage();
+                displayStorageKeys();
+                log('Refreshed storage status');
+            });
+            
+            document.getElementById('test-storage-btn').addEventListener('click', testStorage);
+            document.getElementById('view-pdfs-btn').addEventListener('click', displayPDFs);
+            document.getElementById('create-sample-btn').addEventListener('click', createSamplePDF);
+            document.getElementById('view-accounts-btn').addEventListener('click', displayAccounts);
+            document.getElementById('create-teacher-btn').addEventListener('click', createTeacherAccount);
+            document.getElementById('create-student-btn').addEventListener('click', createStudentAccount);
+            document.getElementById('clear-pdfs-btn').addEventListener('click', clearPDFs);
+            document.getElementById('clear-accounts-btn').addEventListener('click', clearAccounts);
+            document.getElementById('clear-all-btn').addEventListener('click', clearAll);
+        });
+    </script>
+</body>
+</html> 

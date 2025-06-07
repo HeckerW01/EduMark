@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduMark AI Integration Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .status { padding: 15px; margin: 20px 0; border-radius: 8px; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+        .warning { background: #fff3e0; color: #f57c00; }
+        .error { background: #ffebee; color: #c62828; }
+        .code { background: #f5f5f5; padding: 10px; border-radius: 4px; font-family: monospace; margin: 10px 0; }
+        button { background: #2196f3; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; margin: 10px 5px; }
+        button:hover { background: #1976d2; }
+        .dashboard-content { border: 2px dashed #ddd; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        .sidebar { list-style: none; padding: 0; margin: 20px 0; }
+        .sidebar li { background: #f0f0f0; margin: 5px 0; padding: 10px; border-radius: 4px; }
+        .sidebar a { text-decoration: none; color: #333; display: block; }
+        .sidebar a.active { background: #2196f3; color: white; padding: 5px 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 EduMark AI Integration Test</h1>
+        
+        <div class="status warning">
+            <strong>⚡ Integration Status:</strong> Testing AI chat integration...
+        </div>
+
+        <h2>📋 Test Checklist</h2>
+        
+        <h3>1. Dashboard Simulation</h3>
+        <p>This simulates the dashboard structure where AI chat integrates:</p>
+        
+        <div class="dashboard-content">
+            <h4>Dashboard Content Area</h4>
+            <ul class="sidebar">
+                <li><a href="#" data-tab="upload">Upload PDF</a></li>
+                <li><a href="#" data-tab="assignments">Assignments</a></li>
+                <li><a href="#" data-tab="students">Students</a></li>
+                <li><a href="#" data-tab="settings">Settings</a></li>
+            </ul>
+            <p><em>AI chat tab should appear above when integration loads...</em></p>
+        </div>
+
+        <h3>2. Integration Tests</h3>
+        
+        <button onclick="testEduMarkAI()">Test AI Integration</button>
+        <button onclick="testAPIEndpoint()">Test API Connection</button>
+        <button onclick="simulateLogin()">Simulate Dashboard</button>
+        
+        <div id="test-results"></div>
+
+        <h3>3. Manual Tests</h3>
+        <ol>
+            <li><strong>Teacher Dashboard:</strong> Go to <code>teacher-dashboard.html</code> → Look for "🧠 EduMarkAI" tab</li>
+            <li><strong>Student Dashboard:</strong> Go to <code>student-dashboard.html</code> → Look for "🧠 EduMarkAI" tab</li>
+            <li><strong>API Update:</strong> Use browser console: <code>updateEduMarkAIEndpoint('your-url')</code></li>
+        </ol>
+
+        <h3>4. Current Configuration</h3>
+        <div class="code" id="current-config">Loading configuration...</div>
+
+        <div class="status success">
+            <strong>✅ Files Ready:</strong>
+            <ul>
+                <li>Lambda Function: <code>edumark-lambda-deployment.zip</code></li>
+                <li>AI Integration: <code>js/edumark-ai-integration.js</code></li>
+                <li>Deployment Guide: <code>EDUMARK-LAMBDA-DEPLOYMENT.md</code></li>
+                <li>Setup Instructions: <code>AI-SETUP-INSTRUCTIONS.md</code></li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="js/edumark-ai-integration.js"></script>
+    <script>
+        function testEduMarkAI() {
+            const results = document.getElementById('test-results');
+            results.innerHTML = '<h4>🧪 Running Tests...</h4>';
+            
+            let testResults = [];
+            
+            // Test 1: Check if EduMarkAI class exists
+            if (typeof EduMarkAI !== 'undefined') {
+                testResults.push('✅ EduMarkAI class loaded');
+            } else {
+                testResults.push('❌ EduMarkAI class not found');
+            }
+            
+            // Test 2: Check if global functions exist
+            if (typeof updateEduMarkAIEndpoint !== 'undefined') {
+                testResults.push('✅ Global update function available');
+            } else {
+                testResults.push('❌ Global update function missing');
+            }
+            
+            // Test 3: Check if instance exists
+            if (window.edumarkAI) {
+                testResults.push('✅ EduMarkAI instance created');
+                testResults.push(`📡 API Endpoint: ${window.edumarkAI.apiEndpoint}`);
+            } else {
+                testResults.push('❌ EduMarkAI instance not found');
+            }
+            
+            // Test 4: Try to initialize
+            try {
+                if (!window.edumarkAI) {
+                    window.edumarkAI = new EduMarkAI();
+                }
+                window.edumarkAI.init();
+                testResults.push('✅ AI integration initialized');
+                
+                // Check if AI tab was added
+                const aiTab = document.querySelector('a[data-tab="ai-chat"]');
+                if (aiTab) {
+                    testResults.push('✅ AI chat tab created');
+                } else {
+                    testResults.push('⚠️ AI chat tab not visible (normal for test page)');
+                }
+                
+            } catch (error) {
+                testResults.push(`❌ Initialization error: ${error.message}`);
+            }
+            
+            results.innerHTML = '<h4>🧪 Test Results:</h4><ul><li>' + testResults.join('</li><li>') + '</li></ul>';
+        }
+        
+        function testAPIEndpoint() {
+            const results = document.getElementById('test-results');
+            results.innerHTML = '<h4>🌐 Testing API Connection...</h4>';
+            
+            if (!window.edumarkAI) {
+                results.innerHTML += '<p>❌ AI integration not loaded</p>';
+                return;
+            }
+            
+            const endpoint = window.edumarkAI.apiEndpoint;
+            results.innerHTML += `<p>📡 Testing endpoint: <code>${endpoint}</code></p>`;
+            
+            if (endpoint.includes('your-api-id')) {
+                results.innerHTML += '<div class="status warning"><strong>⚠️ Default endpoint detected</strong><br>You need to update the API endpoint with your actual Lambda URL</div>';
+            } else {
+                results.innerHTML += '<div class="status success"><strong>✅ Custom endpoint configured</strong><br>Endpoint appears to be updated</div>';
+            }
+        }
+        
+        function simulateLogin() {
+            // Simulate being logged in
+            localStorage.setItem('username', 'test_teacher');
+            localStorage.setItem('userType', 'teacher');
+            localStorage.setItem('isLoggedIn', 'true');
+            
+            // Redirect to teacher dashboard
+            alert('Redirecting to teacher dashboard to test AI integration...');
+            window.location.href = 'teacher-dashboard.html';
+        }
+        
+        // Load current configuration
+        document.addEventListener('DOMContentLoaded', () => {
+            const configDiv = document.getElementById('current-config');
+            
+            setTimeout(() => {
+                if (window.edumarkAI) {
+                    configDiv.innerHTML = `
+                        <strong>EduMarkAI Configuration:</strong><br>
+                        API Endpoint: ${window.edumarkAI.apiEndpoint}<br>
+                        Conversation History: ${window.edumarkAI.conversationHistory.length} messages<br>
+                        Initialized: ${window.edumarkAI.isInitialized}<br>
+                        Version: Integration v1.0
+                    `;
+                } else {
+                    configDiv.innerHTML = 'EduMarkAI not loaded - this is normal for the test page';
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html> 

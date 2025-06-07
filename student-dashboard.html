@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - ClassPDF</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <header>
+        <div class="logo">ClassPDF</div>
+        <div class="user-info">
+            <span id="user-name">Loading...</span>
+            <div class="notification-counter">
+                <span class="notification-icon">🔔</span>
+                <span class="notification-count">0</span>
+            </div>
+            <button id="logout-btn">Logout</button>
+        </div>
+    </header>
+
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <nav>
+                <ul>
+                    <li><a href="#" class="active" data-tab="assignments">Assignments</a></li>
+                    <li><a href="#" data-tab="completed">Completed</a></li>
+                    <li><a href="#" data-tab="chat">Chat</a></li>
+                    <li><a href="#" data-tab="settings">Settings</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="dashboard-content">
+            <!-- Assignments Tab -->
+            <section id="assignments" class="tab-content active">
+                <h2>Current Assignments</h2>
+                <div class="assignments-list" id="current-assignments">
+                    <p class="empty-message">No current assignments.</p>
+                </div>
+            </section>
+
+            <!-- Completed Tab -->
+            <section id="completed" class="tab-content">
+                <h2>Completed Assignments</h2>
+                <div class="assignments-list" id="completed-assignments">
+                    <p class="empty-message">No completed assignments.</p>
+                </div>
+            </section>
+
+            <!-- Chat Tab -->
+            <section id="chat" class="tab-content">
+                <h2>Chat with Teachers</h2>
+                <div class="chat-container">
+                    <div class="students-sidebar">
+                        <div class="search-box">
+                            <input type="text" placeholder="Search teachers..." id="chat-search">
+                        </div>
+                        <div class="students-list-chat" id="teachers-list">
+                            <!-- Teacher list will be populated here -->
+                        </div>
+                    </div>
+                    <div class="chat-main">
+                        <div class="chat-header">
+                            <h3>Select a teacher to start chatting</h3>
+                        </div>
+                        <div class="chat-messages"></div>
+                        <div class="chat-input-area">
+                            <textarea placeholder="Type your message..." id="chat-message-input" disabled></textarea>
+                            <button id="send-message-btn" disabled>Send</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Tab -->
+            <section id="settings" class="tab-content">
+                <h2>Settings</h2>
+                <div class="settings-form">
+                    <div class="form-group">
+                        <label for="student-profile-name">Full Name</label>
+                        <input type="text" id="student-profile-name" name="name">
+                    </div>
+                    <div class="form-group">
+                        <label for="student-profile-email">Email</label>
+                        <input type="email" id="student-profile-email" name="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="student-profile-class">Class</label>
+                        <select id="student-profile-class" name="class">
+                            <option value="class1">Class 1</option>
+                            <option value="class2">Class 2</option>
+                        </select>
+                    </div>
+                    <button type="button" class="save-settings-btn">Save Settings</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="notifications-panel">
+        <div class="notifications-header">
+            <h3>Notifications</h3>
+            <button class="close-notifications">×</button>
+        </div>
+        <div class="notifications-list"></div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching functionality
+            const tabLinks = document.querySelectorAll('.sidebar a');
+            tabLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Set active tab link
+                    tabLinks.forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Show corresponding tab content
+                    const tabId = this.getAttribute('data-tab');
+                    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+                    document.getElementById(tabId).classList.add('active');
+                    
+                    // If chat tab is selected, load teacher list
+                    if (tabId === 'chat') {
+                        loadTeachersList();
+                    }
+                });
+            });
+            
+            // Load assignments
+            loadCurrentAssignments();
+            loadCompletedAssignments();
+            
+            // Initialize notifications
+            initializeNotifications();
+            
+            // Add chat functionality
+            initializeChat();
+        });
+        
+        /**
+         * Initialize notifications system
+         */
+        function initializeNotifications() {
+            // Add event listeners for notification counter
+            const notificationCounter = document.querySelector('.notification-counter');
+            const notificationsPanel = document.querySelector('.notifications-panel');
+            
+            notificationCounter.addEventListener('click', () => {
+                notificationsPanel.classList.toggle('active');
+                updateNotifications();
+            });
+            
+            document.querySelector('.close-notifications').addEventListener('click', () => {
+                notificationsPanel.classList.remove('active');
+            });
+            
+            // Check for new notifications
+            updateNotifications();
+            setInterval(updateNotifications, 30000); // Check every 30 seconds
+        }
+        
+        /**
+         * Update notifications
+         */
+        function updateNotifications() {
+            // Get all chat messages
+            const chatMessages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
+            const studentName = localStorage.getItem('username');
+            
+            // Get unread messages from teachers
+            const newMessages = chatMessages.filter(msg => 
+                msg.recipient === studentName && msg.sender.startsWith('teacher_') && !msg.read);
+            
+            // Update notification count
+            const countElement = document.querySelector('.notification-count');
+            countElement.textContent = newMessages.length;
+            
+            if (newMessages.length > 0) {
+                countElement.classList.add('has-notifications');
+            } else {
+                countElement.classList.remove('has-notifications');
+            }
+            
+            // Update notifications list
+            const notificationsList = document.querySelector('.notifications-list');
+            notificationsList.innerHTML = '';
+            
+            // Add new message notifications
+            newMessages.forEach(message => {
+                const notificationItem = document.createElement('div');
+                notificationItem.className = 'notification-item message-notification';
+                notificationItem.innerHTML = `
+                    <div class="notification-content">
+                        <strong>${message.sender.replace('teacher_', 'Teacher: ')}</strong> sent you a message
+                    </div>
+                    <div class="notification-time">
+                        ${formatDate(new Date(message.timestamp))}
+                    </div>
+                `;
+                
+                notificationItem.addEventListener('click', () => {
+                    // Mark as read
+                    message.read = true;
+                    localStorage.setItem('chatMessages', JSON.stringify(chatMessages));
+                    
+                    // Open chat with this teacher
+                    openChatTab(message.sender);
+                    
+                    // Refresh notifications
+                    updateNotifications();
+                });
+                
+                notificationsList.appendChild(notificationItem);
+            });
+            
+            if (newMessages.length === 0) {
+                notificationsList.innerHTML = '<p class="empty-notification">No new notifications</p>';
+            }
+        }
+        
+        /**
+         * Format date for notifications
+         */
+        function formatDate(date) {
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSec = Math.floor(diffMs / 1000);
+            const diffMin = Math.floor(diffSec / 60);
+            const diffHour = Math.floor(diffMin / 60);
+            const diffDay = Math.floor(diffHour / 24);
+            
+            if (diffSec < 60) {
+                return 'Just now';
+            } else if (diffMin < 60) {
+                return `${diffMin} minute${diffMin > 1 ? 's' : ''} ago`;
+            } else if (diffHour < 24) {
+                return `${diffHour} hour${diffHour > 1 ? 's' : ''} ago`;
+            } else if (diffDay < 7) {
+                return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`;
+            } else {
+                return date.toLocaleDateString();
+            }
+        }
+        
+        /**
+         * Open chat tab with specific teacher
+         */
+        function openChatTab(teacherName) {
+            // Switch to chat tab
+            const chatTabLink = document.querySelector('a[data-tab="chat"]');
+            chatTabLink.click();
+            
+            // Select the teacher in the list
+            setTimeout(() => {
+                const teacherItem = document.querySelector(`.teacher-chat-item[data-teacher="${teacherName}"]`);
+                if (teacherItem) {
+                    teacherItem.click();
+                }
+            }, 100);
+        }
+        
+        /**
+         * Initialize chat functionality
+         */
+        function initializeChat() {
+            const sendButton = document.getElementById('send-message-btn');
+            const chatInput = document.getElementById('chat-message-input');
+            
+            // Set up message sending
+            sendButton.addEventListener('click', sendChatMessage);
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendChatMessage();
+                }
+            });
+        }
+        
+        /**
+         * Load teachers list for chat
+         */
+        function loadTeachersList() {
+            const teachersListElement = document.getElementById('teachers-list');
+            teachersListElement.innerHTML = '';
+            
+            // Get all teachers who have accounts
+            const teachers = JSON.parse(localStorage.getItem('userAccounts') || '[]')
+                .filter(account => account.type === 'teacher');
+            
+            // Get all chat messages
+            const chatMessages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
+            const studentName = localStorage.getItem('username');
+            
+            // Add default teacher if no teachers found
+            if (teachers.length === 0) {
+                teachers.push({ username: 'teacher_admin', name: 'Teacher Admin' });
+            }
+            
+            teachers.forEach(teacher => {
+                const teacherUsername = teacher.username;
+                
+                // Check for unread messages from this teacher
+                const unreadCount = chatMessages.filter(msg => 
+                    msg.sender === teacherUsername && 
+                    msg.recipient === studentName && 
+                    !msg.read).length;
+                
+                const teacherItem = document.createElement('div');
+                teacherItem.className = 'teacher-chat-item';
+                teacherItem.dataset.teacher = teacherUsername;
+                teacherItem.innerHTML = `
+                    <div class="teacher-name">${teacherUsername.replace('teacher_', 'Teacher: ')}</div>
+                    ${unreadCount > 0 ? `<div class="unread-badge">${unreadCount}</div>` : ''}
+                `;
+                
+                teacherItem.addEventListener('click', () => {
+                    // Set this teacher as active
+                    document.querySelectorAll('.teacher-chat-item').forEach(item => {
+                        item.classList.remove('active');
+                    });
+                    teacherItem.classList.add('active');
+                    
+                    // Open chat with this teacher
+                    openChatWithTeacher(teacherUsername);
+                });
+                
+                teachersListElement.appendChild(teacherItem);
+            });
+            
+            // Filter functionality for search box
+            document.getElementById('chat-search').addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const teacherItems = document.querySelectorAll('.teacher-chat-item');
+                
+                teacherItems.forEach(item => {
+                    const teacherName = item.querySelector('.teacher-name').textContent.toLowerCase();
+                    if (teacherName.includes(searchTerm)) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        }
+        
+        /**
+         * Open chat with a specific teacher
+         */
+        function openChatWithTeacher(teacherName) {
+            // Update UI
+            const chatHeader = document.querySelector('.chat-header');
+            chatHeader.innerHTML = `<h3>Chat with ${teacherName.replace('teacher_', 'Teacher: ')}</h3>`;
+            
+            const chatInput = document.getElementById('chat-message-input');
+            const sendButton = document.getElementById('send-message-btn');
+            
+            chatInput.disabled = false;
+            sendButton.disabled = false;
+            
+            // Store active teacher
+            chatInput.dataset.recipient = teacherName;
+            
+            // Load messages for this teacher
+            loadChatMessages(teacherName);
+        }
+        
+        /**
+         * Load chat messages for a given teacher
+         */
+        function loadChatMessages(teacherName) {
+            const messagesContainer = document.querySelector('.chat-messages');
+            messagesContainer.innerHTML = '';
+            
+            // Get all messages between the student and this teacher
+            const chatMessages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
+            const studentName = localStorage.getItem('username');
+            
+            const relevantMessages = chatMessages.filter(msg => 
+                (msg.sender === studentName && msg.recipient === teacherName) ||
+                (msg.sender === teacherName && msg.recipient === studentName)
+            ).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            
+            if (relevantMessages.length === 0) {
+                messagesContainer.innerHTML = '<p class="empty-message">No messages yet. Start the conversation!</p>';
+            } else {
+                relevantMessages.forEach(message => {
+                    const messageElement = document.createElement('div');
+                    messageElement.className = `message ${message.sender === studentName ? 'sent' : 'received'}`;
+                    messageElement.innerHTML = `
+                        <div class="message-content">${message.content}</div>
+                        <div class="message-time">${new Date(message.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                    `;
+                    messagesContainer.appendChild(messageElement);
+                    
+                    // Mark as read if it's from a teacher
+                    if (message.sender === teacherName && !message.read) {
+                        message.read = true;
+                    }
+                });
+                
+                // Save updated read status
+                localStorage.setItem('chatMessages', JSON.stringify(chatMessages));
+                
+                // Scroll to bottom
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                // Update notifications
+                updateNotifications();
+            }
+        }
+        
+        /**
+         * Send a chat message
+         */
+        function sendChatMessage() {
+            const chatInput = document.getElementById('chat-message-input');
+            const recipientName = chatInput.dataset.recipient;
+            const content = chatInput.value.trim();
+            
+            if (!content || !recipientName) return;
+            
+            // Get the current username (student)
+            const studentName = localStorage.getItem('username');
+            
+            // Create new message
+            const newMessage = {
+                id: Date.now().toString(),
+                sender: studentName,
+                recipient: recipientName,
+                content: content,
+                timestamp: new Date().toISOString(),
+                read: false
+            };
+            
+            // Add to storage
+            const chatMessages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
+            chatMessages.push(newMessage);
+            localStorage.setItem('chatMessages', JSON.stringify(chatMessages));
+            
+            // Clear input
+            chatInput.value = '';
+            
+            // Refresh messages
+            loadChatMessages(recipientName);
+        }
+        
+        /**
+         * Load current assignments
+         */
+        function loadCurrentAssignments() {
+            const currentAssignmentsElement = document.getElementById('current-assignments');
+            
+            // Get all assignments
+            const allAssignments = JSON.parse(localStorage.getItem('teacherAssignments') || '[]');
+            
+            // Get student's submissions
+            const studentSubmissions = JSON.parse(localStorage.getItem('studentSubmissions') || '[]');
+            const studentName = localStorage.getItem('username');
+            
+            // Filter for incomplete assignments
+            const currentAssignments = allAssignments.filter(assignment => {
+                const submission = studentSubmissions.find(sub => 
+                    sub.assignmentId === assignment.id && 
+                    sub.studentName === studentName);
+                
+                return !submission || submission.status !== 'submitted';
+            });
+            
+            if (currentAssignments.length === 0) {
+                currentAssignmentsElement.innerHTML = '<p class="empty-message">No current assignments.</p>';
+                return;
+            }
+            
+            // Display current assignments
+            currentAssignmentsElement.innerHTML = '';
+            currentAssignments.forEach(assignment => {
+                const assignmentElement = document.createElement('div');
+                assignmentElement.className = 'assignment-card';
+                
+                const submission = studentSubmissions.find(sub => 
+                    sub.assignmentId === assignment.id && 
+                    sub.studentName === studentName);
+                
+                const status = submission ? 'In Progress' : 'Not Started';
+                
+                assignmentElement.innerHTML = `
+                    <div class="assignment-title">${assignment.title}</div>
+                    <div class="assignment-meta">
+                        <div>Due: ${formatDueDate(assignment.dueDate)}</div>
+                        <div>Status: ${status}</div>
+                    </div>
+                    <div class="assignment-actions">
+                        <button class="view-assignment-btn" data-id="${assignment.id}">View Assignment</button>
+                    </div>
+                `;
+                
+                currentAssignmentsElement.appendChild(assignmentElement);
+            });
+            
+            // Add event listeners to view buttons
+            document.querySelectorAll('.view-assignment-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const assignmentId = this.getAttribute('data-id');
+                    window.location.href = `assignment-viewer.html?id=${assignmentId}`;
+                });
+            });
+        }
+        
+        /**
+         * Load completed assignments
+         */
+        function loadCompletedAssignments() {
+            const completedAssignmentsElement = document.getElementById('completed-assignments');
+            
+            // Get all assignments
+            const allAssignments = JSON.parse(localStorage.getItem('teacherAssignments') || '[]');
+            
+            // Get student's submissions
+            const studentSubmissions = JSON.parse(localStorage.getItem('studentSubmissions') || '[]');
+            const studentName = localStorage.getItem('username');
+            
+            // Filter for completed assignments
+            const completedAssignments = allAssignments.filter(assignment => {
+                const submission = studentSubmissions.find(sub => 
+                    sub.assignmentId === assignment.id && 
+                    sub.studentName === studentName);
+                
+                return submission && submission.status === 'submitted';
+            });
+            
+            if (completedAssignments.length === 0) {
+                completedAssignmentsElement.innerHTML = '<p class="empty-message">No completed assignments.</p>';
+                return;
+            }
+            
+            // Display completed assignments
+            completedAssignmentsElement.innerHTML = '';
+            completedAssignments.forEach(assignment => {
+                const submission = studentSubmissions.find(sub => 
+                    sub.assignmentId === assignment.id && 
+                    sub.studentName === studentName);
+                
+                const assignmentElement = document.createElement('div');
+                assignmentElement.className = 'assignment-card completed';
+                
+                const submittedDate = new Date(submission.submittedAt).toLocaleDateString();
+                
+                assignmentElement.innerHTML = `
+                    <div class="assignment-title">${assignment.title}</div>
+                    <div class="assignment-meta">
+                        <div>Submitted: ${submittedDate}</div>
+                        <div>Grade: ${submission.grade || 'Not graded yet'}</div>
+                    </div>
+                    <div class="assignment-actions">
+                        <button class="view-assignment-btn" data-id="${assignment.id}">View Submission</button>
+                    </div>
+                `;
+                
+                completedAssignmentsElement.appendChild(assignmentElement);
+            });
+            
+            // Add event listeners to view buttons
+            document.querySelectorAll('.view-assignment-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const assignmentId = this.getAttribute('data-id');
+                    window.location.href = `assignment-viewer.html?id=${assignmentId}&readonly=true`;
+                });
+            });
+        }
+        
+        /**
+         * Format due date
+         */
+        function formatDueDate(dateString) {
+            if (!dateString) return 'No due date';
+            
+            const dueDate = new Date(dateString);
+            const now = new Date();
+            
+            // Check if date is valid
+            if (isNaN(dueDate.getTime())) return 'Invalid date';
+            
+            // Format the date
+            const formattedDate = dueDate.toLocaleDateString();
+            
+            // Check if it's due soon
+            const diffTime = dueDate - now;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays < 0) {
+                return `<span class="overdue">${formattedDate} (Overdue)</span>`;
+            } else if (diffDays === 0) {
+                return `<span class="due-today">${formattedDate} (Today)</span>`;
+            } else if (diffDays === 1) {
+                return `<span class="due-soon">${formattedDate} (Tomorrow)</span>`;
+            } else if (diffDays <= 3) {
+                return `<span class="due-soon">${formattedDate} (${diffDays} days)</span>`;
+            }
+            
+            return formattedDate;
+        }
+    </script>
+    <script src="test-app.js"></script>
+    <script src="js/edumark-ai-integration.js"></script>
+</body>
+</html> 

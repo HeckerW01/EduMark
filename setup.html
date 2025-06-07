@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassPDF Setup - Debug Helper</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            background-color: #f9f9f9;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        
+        .storage-view {
+            background-color: #f0f0f0;
+            padding: 1rem;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        
+        th, td {
+            padding: 0.5rem;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">ClassPDF - Debug Helper</div>
+    </header>
+    
+    <div class="container">
+        <div class="card">
+            <h2>Setup Test Data</h2>
+            <p>Click the button below to populate localStorage with test data for debugging.</p>
+            <div class="button-group">
+                <button id="setup-data-btn" class="primary-btn">Setup Test Data</button>
+                <button id="clear-data-btn" class="secondary-btn">Clear All Data</button>
+            </div>
+            <p><strong>Note:</strong> This will preserve your current login status.</p>
+        </div>
+        
+        <div class="card">
+            <h2>Current Login Status</h2>
+            <div id="login-status"></div>
+            <div class="button-group">
+                <button id="login-student-btn" class="primary-btn">Login as Student</button>
+                <button id="login-teacher-btn" class="primary-btn">Login as Teacher</button>
+                <button id="logout-btn" class="secondary-btn">Logout</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>LocalStorage Data</h2>
+            <div class="storage-view">
+                <table id="storage-table">
+                    <thead>
+                        <tr>
+                            <th>Key</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody id="storage-data"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <a href="index.html" class="primary-btn">Go to Home Page</a>
+            <a href="student-dashboard.html" class="primary-btn">Go to Student Dashboard</a>
+            <a href="teacher-dashboard.html" class="primary-btn">Go to Teacher Dashboard</a>
+        </div>
+    </div>
+
+    <script src="setup-test-data.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Display current login status
+            updateLoginStatus();
+            
+            // Display localStorage data
+            updateStorageView();
+            
+            // Setup data button
+            document.getElementById('setup-data-btn').addEventListener('click', function() {
+                // Execute setup script
+                const script = document.createElement('script');
+                script.src = 'setup-test-data.js';
+                document.body.appendChild(script);
+                script.onload = function() {
+                    alert('Test data has been set up successfully!');
+                    updateStorageView();
+                    updateLoginStatus();
+                };
+            });
+            
+            // Clear data button
+            document.getElementById('clear-data-btn').addEventListener('click', function() {
+                if (confirm('Are you sure you want to clear all data from localStorage?')) {
+                    localStorage.clear();
+                    alert('All data has been cleared!');
+                    updateStorageView();
+                    updateLoginStatus();
+                }
+            });
+            
+            // Login buttons
+            document.getElementById('login-student-btn').addEventListener('click', function() {
+                localStorage.setItem('userType', 'student');
+                localStorage.setItem('username', 'student1');
+                updateLoginStatus();
+            });
+            
+            document.getElementById('login-teacher-btn').addEventListener('click', function() {
+                localStorage.setItem('userType', 'teacher');
+                localStorage.setItem('username', 'teacher1');
+                updateLoginStatus();
+            });
+            
+            // Logout button
+            document.getElementById('logout-btn').addEventListener('click', function() {
+                localStorage.removeItem('userType');
+                localStorage.removeItem('username');
+                updateLoginStatus();
+            });
+            
+            // Functions
+            function updateLoginStatus() {
+                const userType = localStorage.getItem('userType');
+                const username = localStorage.getItem('username');
+                const statusEl = document.getElementById('login-status');
+                
+                if (userType && username) {
+                    statusEl.innerHTML = `<p>Currently logged in as <strong>${username}</strong> (${userType})</p>`;
+                } else {
+                    statusEl.innerHTML = '<p>Not currently logged in</p>';
+                }
+            }
+            
+            function updateStorageView() {
+                const storageData = document.getElementById('storage-data');
+                storageData.innerHTML = '';
+                
+                // Loop through localStorage items
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    let value = localStorage.getItem(key);
+                    
+                    // Try to parse JSON values
+                    try {
+                        const parsedValue = JSON.parse(value);
+                        value = JSON.stringify(parsedValue, null, 2);
+                    } catch (e) {
+                        // Not JSON, use as is
+                    }
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${key}</td>
+                        <td><pre>${value}</pre></td>
+                    `;
+                    storageData.appendChild(row);
+                }
+                
+                if (localStorage.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = '<td colspan="2" style="text-align: center;">No data in localStorage</td>';
+                    storageData.appendChild(row);
+                }
+            }
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Test PDF - ClassPDF</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .sample-pdfs {
+            margin-bottom: 2rem;
+        }
+        
+        .pdf-item {
+            background-color: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .pdf-title {
+            font-weight: bold;
+            font-size: 18px;
+            margin: 0;
+        }
+        
+        .btn {
+            padding: 6px 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .btn:hover {
+            background-color: var(--primary-color-dark);
+        }
+        
+        .upload-container {
+            margin-top: 3rem;
+            text-align: center;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .upload-button {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: background-color 0.3s;
+        }
+        
+        .upload-button:hover {
+            background-color: var(--primary-color-dark);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">ClassPDF</div>
+    </header>
+    
+    <div class="container">
+        <h1>View Test PDF</h1>
+        
+        <div class="sample-pdfs">
+            <h2>Sample PDFs</h2>
+            <div class="pdf-item">
+                <p class="pdf-title">Sample PDF from LocalStorage</p>
+                <button class="btn view-local-pdf">View</button>
+            </div>
+        </div>
+        
+        <div class="upload-container">
+            <h2>Upload Your Own PDF</h2>
+            <p>Select a PDF file to view it with our advanced PDF viewer</p>
+            <input type="file" id="fileElem" accept="application/pdf" class="file-input">
+            <label for="fileElem" class="upload-button">Browse Files</label>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            const viewLocalPdfBtn = document.querySelector('.view-local-pdf');
+            const fileInput = document.getElementById('fileElem');
+            
+            // Load latest PDF from localStorage
+            viewLocalPdfBtn.addEventListener('click', () => {
+                // Get all PDFs from localStorage
+                const allStorageKeys = Object.keys(localStorage);
+                const pdfKeys = allStorageKeys.filter(key => key.includes('pdfs'));
+                
+                if (pdfKeys.length === 0) {
+                    alert('No PDFs found in localStorage. Please upload a PDF first.');
+                    return;
+                }
+                
+                // Get the latest PDF key
+                const latestPdfKey = pdfKeys[0]; // Just take the first one for simplicity
+                
+                // Get PDFs from this key
+                const pdfs = JSON.parse(localStorage.getItem(latestPdfKey) || '[]');
+                
+                if (pdfs.length === 0) {
+                    alert('No PDFs found in localStorage. Please upload a PDF first.');
+                    return;
+                }
+                
+                // Use the most recent PDF
+                const latestPdf = pdfs[pdfs.length - 1];
+                
+                // Store in session storage for the viewer
+                sessionStorage.setItem('currentViewPdf', JSON.stringify(latestPdf));
+                
+                // Open viewer in a new tab
+                window.open('pdf-viewer.html', '_blank');
+            });
+            
+            // Handle file upload
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    
+                    if (file.type === 'application/pdf') {
+                        // Create a reader to get the file data
+                        const reader = new FileReader();
+                        
+                        reader.onload = function(e) {
+                            const fileData = e.target.result;
+                            
+                            // Create a new document object
+                            const pdfDocument = {
+                                id: Date.now().toString(),
+                                name: file.name,
+                                size: file.size,
+                                uploadedAt: new Date().toISOString(),
+                                data: fileData
+                            };
+                            
+                            // Store in session storage for viewing
+                            sessionStorage.setItem('currentViewPdf', JSON.stringify(pdfDocument));
+                            
+                            // Open viewer in a new tab
+                            window.open('pdf-viewer.html', '_blank');
+                        };
+                        
+                        reader.onerror = function() {
+                            alert('Error reading file. Please try again.');
+                        };
+                        
+                        // Read the file as data URL
+                        reader.readAsDataURL(file);
+                    } else {
+                        alert('Only PDF files are accepted!');
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

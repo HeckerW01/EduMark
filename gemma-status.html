@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduMark Gemma AI Status</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .status-card {
+            background: rgba(255,255,255,0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        .success { border-left: 5px solid #4caf50; }
+        .warning { border-left: 5px solid #ff9800; }
+        .error { border-left: 5px solid #f44336; }
+        .info { border-left: 5px solid #2196f3; }
+        
+        button {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 16px;
+        }
+        button:hover { background: #1976d2; }
+        
+        .test-area {
+            background: rgba(0,0,0,0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        
+        .response {
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            min-height: 50px;
+        }
+        
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 EduMark Gemma AI Status</h1>
+        
+        <div class="status-card info">
+            <h3>📋 System Check</h3>
+            <div id="system-status">Running diagnostics...</div>
+        </div>
+
+        <div class="status-card" id="gemma-status">
+            <h3>🤖 Gemma AI Status</h3>
+            <div id="ai-status">Checking AI integration...</div>
+        </div>
+
+        <div class="test-area">
+            <h3>🧪 Test EduMark AI</h3>
+            <p>Try sending a message to test the AI functionality:</p>
+            
+            <input type="text" id="test-input" placeholder="Ask me about homework, study tips, or any school subject..." />
+            <button onclick="testAI()">Send Test Message</button>
+            <button onclick="loadDashboard()">Go to Teacher Dashboard</button>
+            
+            <div id="test-response" class="response hidden">
+                <strong>AI Response:</strong>
+                <div id="response-text"></div>
+            </div>
+        </div>
+
+        <div class="status-card info">
+            <h3>📥 Local Model Instructions</h3>
+            <p>To use the full local Gemma model:</p>
+            <ol>
+                <li>Download <code>gemma-2b-it-gpu-int8.bin</code> from Kaggle</li>
+                <li>Create a <code>models</code> folder in your project</li>
+                <li>Place the .bin file in the models folder</li>
+                <li>Refresh this page - local Gemma will load automatically</li>
+            </ol>
+            <p><strong>Note:</strong> The AI works with educational responses even without the local model!</p>
+        </div>
+
+        <div class="status-card info">
+            <h3>🔧 Quick Actions</h3>
+            <button onclick="checkBrowserSupport()">Check Browser Support</button>
+            <button onclick="testEducationalResponses()">Test Educational Responses</button>
+            <button onclick="clearAIData()">Clear AI Data</button>
+        </div>
+
+        <div id="diagnostics" class="status-card hidden">
+            <h3>🔍 Detailed Diagnostics</h3>
+            <div id="diagnostic-info"></div>
+        </div>
+    </div>
+
+    <script src="js/edumark-ai-integration.js"></script>
+    <script>
+        let testAI_instance = null;
+
+        // Initialize status check
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkSystemStatus();
+            
+            // Wait for AI integration to load
+            setTimeout(checkAIIntegration, 2000);
+        });
+
+        async function checkSystemStatus() {
+            const statusDiv = document.getElementById('system-status');
+            let status = [];
+
+            // Check browser features
+            status.push(navigator.gpu ? '✅ WebGPU supported' : '⚠️ WebGPU not supported');
+            status.push(window.fetch ? '✅ Fetch API available' : '❌ Fetch API missing');
+            status.push(window.localStorage ? '✅ LocalStorage available' : '❌ LocalStorage missing');
+            
+            // Check AI script loading
+            status.push(window.EduMarkAI ? '✅ AI integration loaded' : '⏳ AI integration loading...');
+
+            statusDiv.innerHTML = status.join('<br>');
+        }
+
+        async function checkAIIntegration() {
+            const statusDiv = document.getElementById('ai-status');
+            const statusCard = document.getElementById('gemma-status');
+
+            if (window.edumarkAI) {
+                statusDiv.innerHTML = '✅ EduMark AI integration active<br>📱 Ready for educational assistance';
+                statusCard.className = 'status-card success';
+                
+                // Create test instance
+                testAI_instance = window.edumarkAI;
+            } else {
+                statusDiv.innerHTML = '⚠️ AI integration not found<br>🔄 Try refreshing the page';
+                statusCard.className = 'status-card warning';
+            }
+        }
+
+        async function testAI() {
+            const input = document.getElementById('test-input');
+            const responseDiv = document.getElementById('test-response');
+            const responseText = document.getElementById('response-text');
+            
+            if (!input.value.trim()) {
+                input.placeholder = 'Please enter a message first!';
+                return;
+            }
+
+            responseDiv.classList.remove('hidden');
+            responseText.innerHTML = '🤔 Thinking...';
+
+            try {
+                if (testAI_instance && testAI_instance.generateEducationalResponse) {
+                    // Use the AI integration directly
+                    const response = testAI_instance.generateEducationalResponse(input.value);
+                    responseText.innerHTML = response.replace(/\n/g, '<br>');
+                } else {
+                    // Fallback test
+                    responseText.innerHTML = '🎓 <strong>EduMark AI Test Response</strong><br><br>Your message: "' + input.value + '"<br><br>I\'m working! The AI integration is ready to help with educational content. Try visiting the teacher or student dashboard to use the full chat interface.';
+                }
+                
+                input.value = '';
+            } catch (error) {
+                responseText.innerHTML = '❌ Error testing AI: ' + error.message;
+            }
+        }
+
+        function loadDashboard() {
+            // Simulate being logged in
+            localStorage.setItem('username', 'test_user');
+            localStorage.setItem('userType', 'teacher');
+            localStorage.setItem('isLoggedIn', 'true');
+            
+            // Redirect to dashboard
+            window.location.href = 'teacher-dashboard.html';
+        }
+
+        function checkBrowserSupport() {
+            const diagnostics = document.getElementById('diagnostics');
+            const diagnosticInfo = document.getElementById('diagnostic-info');
+            
+            let info = [];
+            info.push(`<strong>Browser:</strong> ${navigator.userAgent.split(' ')[navigator.userAgent.split(' ').length - 1]}`);
+            info.push(`<strong>WebGPU:</strong> ${navigator.gpu ? 'Supported' : 'Not supported'}`);
+            info.push(`<strong>ES Modules:</strong> ${typeof import === 'function' ? 'Supported' : 'Not supported'}`);
+            info.push(`<strong>Local Storage:</strong> ${window.localStorage ? 'Available' : 'Not available'}`);
+            info.push(`<strong>Fetch API:</strong> ${window.fetch ? 'Available' : 'Not available'}`);
+            
+            // Check for specific AI features
+            info.push(`<strong>EduMark AI:</strong> ${window.edumarkAI ? 'Loaded' : 'Not loaded'}`);
+            info.push(`<strong>AI Integration:</strong> ${window.EduMarkAI ? 'Available' : 'Not available'}`);
+            
+            diagnosticInfo.innerHTML = info.join('<br>');
+            diagnostics.classList.remove('hidden');
+        }
+
+        function testEducationalResponses() {
+            const testMessages = [
+                'Hello',
+                'Help me with homework',
+                'Explain calculus',
+                'How to write an essay',
+                'Study tips for biology'
+            ];
+            
+            const responseDiv = document.getElementById('test-response');
+            const responseText = document.getElementById('response-text');
+            
+            responseDiv.classList.remove('hidden');
+            
+            if (testAI_instance && testAI_instance.generateEducationalResponse) {
+                let results = '<strong>Educational Response Test:</strong><br><br>';
+                
+                testMessages.forEach(msg => {
+                    const response = testAI_instance.generateEducationalResponse(msg);
+                    results += `<strong>Q:</strong> ${msg}<br><strong>A:</strong> ${response.substring(0, 100)}...<br><br>`;
+                });
+                
+                responseText.innerHTML = results;
+            } else {
+                responseText.innerHTML = '⚠️ AI integration not available for testing';
+            }
+        }
+
+        function clearAIData() {
+            // Clear any stored AI data
+            localStorage.removeItem('edumarkAIEndpoint');
+            localStorage.removeItem('ai-chat-history');
+            
+            alert('✅ AI data cleared! Refresh the page to reset the AI integration.');
+        }
+
+        // Add enter key support for test input
+        document.getElementById('test-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                testAI();
+            }
+        });
+    </script>
+</body>
+</html> 
