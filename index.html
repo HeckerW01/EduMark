@@ -198,27 +198,31 @@
                     // Send to AI
                     aiChat.sendMessage(message)
                         .then(response => {
+                            // Add AI response
                             messagesDiv.innerHTML += `
                                 <div class="ai-message">
                                     ${response}
                                 </div>
                             `;
+                            
+                            // Scroll to bottom
                             messagesDiv.scrollTop = messagesDiv.scrollHeight;
                         })
                         .catch(error => {
+                            console.error('AI Error:', error);
                             messagesDiv.innerHTML += `
                                 <div class="ai-message error">
-                                    Sorry, I encountered an error. Please try again.
+                                    Sorry, I'm having trouble connecting right now. Please try again later.
                                 </div>
                             `;
+                            
+                            // Scroll to bottom
+                            messagesDiv.scrollTop = messagesDiv.scrollHeight;
                         });
-                    
-                    // Scroll to bottom
-                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
                 }
             });
 
-            // Send on Enter (but allow Shift+Enter for new line)
+            // Enter key to send message
             document.getElementById('ai-message-input').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();

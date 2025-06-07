@@ -315,3 +315,220 @@ EduMarkAI is the educational AI assistant for ClassPDF. It is designed to:
 - Provide a safe, supportive, and growth-oriented environment for students and teachers.
 
 // Add or update documentation for all functions to describe their general idea. 
+
+# 🧠 EduMark AI - Intelligent Learning Platform
+
+**EduMark AI** is a cutting-edge educational platform powered by **Gemma 3 27B** that provides instant AI-powered homework help, study guidance, and educational support for students and teachers.
+
+## 🌟 Features
+
+### ✅ **AI-Powered Chat Interface**
+- Real-time educational assistance
+- Homework help across all subjects
+- Study strategies and tips
+- 24/7 availability
+
+### ✅ **Gemma 3 27B Integration**
+- Advanced AI model for accurate responses
+- Educational context understanding
+- Multi-subject expertise
+- Natural conversation flow
+
+### ✅ **Responsive Design**
+- Works on all devices (desktop, tablet, mobile)
+- Modern, intuitive interface
+- Accessible UI/UX design
+
+### ✅ **Multiple Deployment Options**
+- Local development server
+- AWS Lambda integration
+- Static hosting support
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js (v14 or higher)
+- npm or yarn
+- Git
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/ViktoriusOnTop/EduMark.git
+cd EduMark
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm start
+```
+
+The platform will be available at `http://localhost:3000`
+
+## 📁 Project Structure
+
+```
+EduMark/
+├── index.html                 # Main landing page
+├── css/
+│   ├── style.css             # Main stylesheet
+│   └── ai-chat.css           # AI chat interface styles
+├── js/
+│   └── edumark-ai-integration.js  # AI chat functionality
+├── server.js                 # Express server
+├── package.json              # Node.js dependencies
+├── lambda_function.py        # AWS Lambda function
+├── requirements.txt          # Python dependencies
+└── README.md                 # Documentation
+```
+
+## 🧠 AI Integration
+
+### Local Development
+The platform includes a fallback AI system for local testing:
+
+```javascript
+// Basic AI responses for common queries
+const responses = {
+    'math': 'I can help you with mathematics!',
+    'science': 'Science is fascinating!',
+    'help': 'How can I assist with your studies?'
+};
+```
+
+### Production (AWS Lambda + Gemma 3 27B)
+For production deployment, the platform integrates with AWS Lambda running Gemma 3 27B:
+
+```python
+# Lambda function with Gemma 3 27B
+GEMMA_MODEL = "google/gemma-3-27b"
+response = query_gemma(user_message, conversation_history)
+```
+
+## 📖 Usage
+
+### For Students
+1. Visit the EduMark platform
+2. Click "Ask AI Assistant" button
+3. Type your question or homework problem
+4. Get instant AI-powered help
+5. Continue the conversation for follow-up questions
+
+### For Teachers
+1. Access the teacher dashboard
+2. Use AI assistance for:
+   - Creating assignments
+   - Explaining complex concepts
+   - Generating study materials
+   - Getting teaching strategies
+
+## 🔧 Configuration
+
+### API Endpoint
+Update the API endpoint in `js/edumark-ai-integration.js`:
+
+```javascript
+this.apiEndpoint = 'https://your-api-gateway.amazonaws.com/prod';
+```
+
+### Environment Variables
+For Lambda deployment, set:
+- `HUGGINGFACE_API_KEY`: Your HuggingFace API key
+- `AWS_REGION`: Your AWS region
+
+## 🚀 Deployment
+
+### Local Development
+```bash
+npm start
+```
+
+### AWS Lambda
+1. Install Python dependencies:
+   ```bash
+   pip install -r requirements.txt -t .
+   ```
+
+2. Create deployment package:
+   ```bash
+   zip -r edumark-lambda.zip .
+   ```
+
+3. Deploy to AWS Lambda via console or CLI
+
+### Static Hosting (Netlify/Vercel)
+The platform can be deployed as a static site with fallback AI responses.
+
+## 🛠️ Development
+
+### Adding New Features
+1. Frontend: Modify HTML/CSS/JS files
+2. Backend: Update `server.js` or `lambda_function.py`
+3. AI Integration: Enhance `edumark-ai-integration.js`
+
+### Testing
+```bash
+# Start development server
+npm run dev
+
+# Test AI responses
+curl -X POST http://localhost:3000/api/ai-chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Help me with math"}'
+```
+
+## 📱 Mobile Support
+
+The platform is fully responsive and optimized for mobile devices:
+- Touch-friendly interface
+- Optimized chat layout
+- Mobile-specific styles
+- Progressive Web App ready
+
+## 🔒 Security
+
+- Input sanitization
+- CORS enabled
+- Environment variable protection
+- API rate limiting (in production)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+For support and questions:
+- Create an issue on GitHub
+- Contact the development team
+- Check the documentation
+
+## 🚀 Future Roadmap
+
+- [ ] Voice-to-text input
+- [ ] PDF document analysis
+- [ ] Multi-language support
+- [ ] Advanced analytics
+- [ ] Teacher dashboard enhancements
+- [ ] Student progress tracking
+
+## 💡 Credits
+
+- **AI Model**: Google Gemma 3 27B
+- **Framework**: Express.js, Vanilla JavaScript
+- **Styling**: Custom CSS with modern design patterns
+- **Deployment**: AWS Lambda, Static hosting
+
+---
+
+**EduMark AI** - Empowering education through artificial intelligence 🎓✨ 
